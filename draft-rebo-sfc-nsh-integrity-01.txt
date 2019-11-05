@@ -568,6 +568,10 @@ Internet-Draft        Intgerity Protection for NSH         November 2019
    Message Authentication Code (MAC) for the Service Path and
    unencrypted Context headers calculated using key K and optionally
    metadata encrypted K.  The scope of this TLV is depicted in Figure 5.
+   This MAC flavor does not require sharing keying material with SFFs.
+   It does not require to recompute the MAC by each SFF because of TTL
+   processing (and potential change of the transport encapsulation
+   protocol).
 
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -607,10 +611,6 @@ Internet-Draft        Intgerity Protection for NSH         November 2019
    o  Nonce Length: Carries the length of the nonce (Section 4 of
       [RFC5116]).
 
-   o  Nonce: Carries the nonce for AEAD algorithms as discussed in
-      Section 3 of [RFC5116].  The associated data (defined in
-
-
 
 
 Boucadair & Reddy          Expires May 7, 2020                 [Page 11]
@@ -618,6 +618,8 @@ Boucadair & Reddy          Expires May 7, 2020                 [Page 11]
 Internet-Draft        Intgerity Protection for NSH         November 2019
 
 
+   o  Nonce: Carries the nonce for AEAD algorithms as discussed in
+      Section 3 of [RFC5116].  The associated data (defined in
       [RFC5116]) MUST be the Service Path and unencrypted Context
       headers.
 
@@ -629,10 +631,6 @@ Internet-Draft        Intgerity Protection for NSH         November 2019
    MAC#2 Context Header is a variable-length TLV that carries the MAC
    for the entire NSH calculated using key K and optionally metadata
    encrypted key K.  The scope of this TLV is depicted in Figure 5.
-   This MAC flavor does not require sharing keying material with SFFs.
-   It does not require to recompute the MAC by each SFF because of TTL
-   processing (and potential change of the transport encapsulation
-   protocol).
 
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -667,14 +665,14 @@ Internet-Draft        Intgerity Protection for NSH         November 2019
 
    o  Metadata Class: MUST be set to 0x0 [RFC8300].
 
+   o  Type: TBD4 (See Section 9)
+
 
 
 Boucadair & Reddy          Expires May 7, 2020                 [Page 12]
 
 Internet-Draft        Intgerity Protection for NSH         November 2019
 
-
-   o  Type: TBD4 (See Section 9)
 
    o  Nonce Length: Carries the length of the nonce (Section 4 of
       [RFC5116]).
@@ -720,6 +718,8 @@ Internet-Draft        Intgerity Protection for NSH         November 2019
 
       Notes: (1) add more text to handle multiple instances of the TLVs,
       (2) check which actual SFC element is doing what, ...
+
+
 
 
 
@@ -884,12 +884,12 @@ Internet-Draft        Intgerity Protection for NSH         November 2019
    o  NSH metadata revealing privacy sensitive information to attackers.
 
    In an SFC-enabled domain where the above attacks are possible, NSH
-   data MUST be integrity- and replay-protected, and privacy-sensitive
-   NSH metadata MUST be encrypted for confidentiality preservation
-   purposes.
+   data MUST be integrity-protected and replay-protected, and privacy-
+   sensitive NSH metadata MUST be encrypted for confidentiality
+   preservation purposes.  The Base and Service Path headers are not
+   encrypted.
 
-   The Base header is not encrypted.  An active attacker can potentially
-   modify the Base header (e.g., decrement the TTL so the next SFF in
+
 
 
 
@@ -898,15 +898,16 @@ Boucadair & Reddy          Expires May 7, 2020                 [Page 16]
 Internet-Draft        Intgerity Protection for NSH         November 2019
 
 
-   the SFP discards the NSH packet).  In the meantime, an active
-   attacker can also drop NSH packets.  AS such this is attack is not
-   considered an attack against the security mechanism specified in the
-   document.
-
-   The scope of the integrity protected data depends on the MAC flavor
-   as discussed in the following sub-sections.
+   Two MAC flavors are defined in Section 6.3.  Considerations specific
+   to each flavor are discussed in the following sub-sections.
 
 8.1.  MAC#1
+
+   An active attacker can potentially modify the Base header (e.g.,
+   decrement the TTL so the next SFF in the SFP discards the NSH
+   packet).  In the meantime, an active attacker can also drop NSH
+   packets.  As such, this is attack is not considered an attack against
+   the security mechanism specified in the document.
 
    No device other than the SFC-aware SFs in the SFC-enabled domain
    should be able to update the integrity protected NSH data.
@@ -939,7 +940,6 @@ Internet-Draft        Intgerity Protection for NSH         November 2019
    IETF Base NSH MD Class) registry available at:
    https://www.iana.org/assignments/nsh/nsh.xhtml#optional-variable-
    length-metadata-types.
-
 
 
 

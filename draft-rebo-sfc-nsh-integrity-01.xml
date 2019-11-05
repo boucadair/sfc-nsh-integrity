@@ -158,7 +158,7 @@
 
           <t>NSH imposer: Refers to the SFC data plane element that is
           entitled to impose NSH with the Context headers defined in this
-          document. </t>
+          document.</t>
         </list></t>
     </section>
 
@@ -288,7 +288,7 @@ Classifier---SFF1----SFF2---SFF3
           instructions.<vspace blankLines="1" />The Service Path Header is not
           encrypted because SFFs use Service Index (SI) in conjunction with
           Service Path Identifier (SPI) for determining the next SF in the
-          path. </t>
+          path.</t>
 
           <t>Provide integrity protection for NSH data:<vspace
           blankLines="1" />Two flavors are supported: <list style="numbers">
@@ -311,7 +311,7 @@ Classifier---SFF1----SFF2---SFF3
           blankLines="1" />The integrity scope is explicitly signaled in the
           NSH by means of a dedicated MD Type (<xref target="enc"></xref>).
           <vspace blankLines="1" />In both schemes, the unencrypted metadata
-          is subject to integrity protection. </t>
+          is subject to integrity protection.</t>
         </list></t>
 
       <t>The Authenticated Encryption with Associated Data (AEAD) algorithm
@@ -363,18 +363,17 @@ Classifier---SFF1----SFF2---SFF3
       and (3) the Message Authentication Code (MAC) for the NSH data
       (depending on the integrity protection scope) calculated using the
       secret key (K) and optionally metadata encrypted K in 'MAC and Encrypted
-      Metadata Context' Header (<xref target="enc"></xref>). </t>
+      Metadata Context' Header (<xref target="enc"></xref>).</t>
 
       <t>An NSH data plane element that needs to check the integrity of the
       NSH data uses the secret key (K) and AEAD algorithm for the key
-      identifier being carried in the NSH. </t>
+      identifier being carried in the NSH.</t>
 
       <t>An SFC-aware SF or SFC proxy that needs to decrypt the metadata uses
       the secret key (K) and the decryption algorithm for the key identifier
       being carried in the NSH.</t>
 
-      <t><xref target="prorules"></xref> specifies the detailed procedure.
-      </t>
+      <t><xref target="prorules"></xref> specifies the detailed procedure.</t>
     </section>
 
     <section anchor="mti" title="Mandatory to Implement AEAD Algorithms">
@@ -495,7 +494,10 @@ Classifier---SFF1----SFF2---SFF3
           Message Authentication Code (MAC) for the Service Path and
           unencrypted Context headers calculated using key K and optionally
           metadata encrypted K. The scope of this TLV is depicted in <xref
-          target="scope2"></xref>.</t>
+          target="scope2"></xref>. This MAC flavor does not require sharing
+          keying material with SFFs. It does not require to recompute the MAC
+          by each SFF because of TTL processing (and potential change of the
+          transport encapsulation protocol).</t>
 
           <figure anchor="scope1" title="Scope of MAC#">
             <artwork><![CDATA[        0                   1                   2                   3
@@ -552,10 +554,7 @@ Classifier---SFF1----SFF2---SFF3
           <t>MAC#2 Context Header is a variable-length TLV that carries the
           MAC for the entire NSH calculated using key K and optionally
           metadata encrypted key K. The scope of this TLV is depicted in <xref
-          target="scope2"></xref>. This MAC flavor does not require sharing
-          keying material with SFFs. It does not require to recompute the MAC
-          by each SFF because of TTL processing (and potential change of the
-          transport encapsulation protocol).</t>
+          target="scope2"></xref>. </t>
 
           <figure anchor="scope2" title="Scope of MAC#2">
             <artwork><![CDATA[        0                   1                   2                   3
@@ -650,7 +649,7 @@ Classifier---SFF1----SFF2---SFF3
         acts as a Message Authentication Code on the input A (defined in <xref
         target="RFC5116"></xref>). An NSH imposer inserts a "MAC and Encrypted
         Metadata" Context Header for integrity protection (<xref
-        target="enc"></xref>). </t>
+        target="enc"></xref>).</t>
 
         <t>The NSH imposer computes the message integrity for the target NSH
         data (depending on the integrity protection scope discussed in <xref
@@ -796,20 +795,22 @@ Classifier---SFF1----SFF2---SFF3
         </list></t>
 
       <t>In an SFC-enabled domain where the above attacks are possible, NSH
-      data MUST be integrity- and replay-protected, and privacy-sensitive NSH
-      metadata MUST be encrypted for confidentiality preservation
-      purposes.</t>
+      data MUST be integrity-protected and replay-protected, and
+      privacy-sensitive NSH metadata MUST be encrypted for confidentiality
+      preservation purposes. The Base and Service Path headers are not
+      encrypted. </t>
 
-      <t>The Base header is not encrypted. An active attacker can potentially
-      modify the Base header (e.g., decrement the TTL so the next SFF in the
-      SFP discards the NSH packet). In the meantime, an active attacker can
-      also drop NSH packets. AS such this is attack is not considered an
-      attack against the security mechanism specified in the document.</t>
-
-      <t>The scope of the integrity protected data depends on the MAC flavor
-      as discussed in the following sub-sections. </t>
+      <t>Two MAC flavors are defined in <xref target="enc"></xref>.
+      Considerations specific to each flavor are discussed in the following
+      sub-sections.</t>
 
       <section title="MAC#1">
+        <t>An active attacker can potentially modify the Base header (e.g.,
+        decrement the TTL so the next SFF in the SFP discards the NSH packet).
+        In the meantime, an active attacker can also drop NSH packets. As
+        such, this is attack is not considered an attack against the security
+        mechanism specified in the document.</t>
+
         <t>No device other than the SFC-aware SFs in the SFC-enabled domain
         should be able to update the integrity protected NSH data. Similarly,
         no device other than the SFC-aware SFs and SFC proxies in the
@@ -823,11 +824,11 @@ Classifier---SFF1----SFF2---SFF3
       <section title="MAC#2">
         <t>SFFs can detect whether an illegitimate node has altered the
         content of the Base header. Such messages are discarded with
-        appropriate logs and alarms generated. </t>
+        appropriate logs and alarms generated.</t>
 
         <t>This approach requires SFFs to have access to the shared key (which
         is used also for encrypting sensitive metadata). This may be
-        undesired. </t>
+        undesired.</t>
 
         <t>A dedicated key may be used for authenticating the Base header,
         while another key is used for the Service Path and Context Headers.
@@ -860,7 +861,7 @@ Classifier---SFF1----SFF2---SFF3
       https://datatracker.ietf.org/meeting/104/materials/slides-104-sfc-sfc-chair-slides-01
       (slide 7).</t>
 
-      <t>Thanks to Joel Halpern and Christian Jacquenet for the comments. </t>
+      <t>Thanks to Joel Halpern and Christian Jacquenet for the comments.</t>
     </section>
   </middle>
 

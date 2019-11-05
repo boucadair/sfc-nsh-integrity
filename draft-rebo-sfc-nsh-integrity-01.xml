@@ -34,7 +34,7 @@
 <rfc category="std" docName="draft-rebo-sfc-nsh-integrity-01"
      ipr="trust200902">
   <front>
-    <title abbrev="Intgerity Protection for NSH">Integrity Protection for
+    <title abbrev="Integrity Protection for NSH">Integrity Protection for
     Network Service Header (NSH) and Encryption of Sensitive Metadata</title>
 
     <author fullname="Mohamed Boucadair" initials="M." surname="Boucadair">
@@ -170,7 +170,7 @@
           the payload protocol.</t>
 
           <t>Service Path Header: Provides path identification and location
-          within a service path.</t>
+          within a service path or Service Function Path (SFP).</t>
 
           <t>Context Header: Carries metadata (i.e., context data) along a
           service path.</t>
@@ -305,7 +305,7 @@ Classifier---SFF1----SFF2---SFF3
           multiple authentication tags and multiple keys, and to prevent SFFs
           from acquiring the secret key to decrypt the metadata, the
           recommendation is not to integrity protect the base header. Such
-          approach does not requrie to recompute the MAC each time TTL is
+          approach does not require to recompute the MAC each time TTL is
           decremented by an SFF. As a reminder, an SFF is not supposed to act
           on the metadata or look into the content of the metadata. <vspace
           blankLines="1" />The integrity scope is explicitly signaled in the
@@ -376,12 +376,14 @@ Classifier---SFF1----SFF2---SFF3
       <t><xref target="prorules"></xref> specifies the detailed procedure.</t>
     </section>
 
-    <section anchor="mti" title="Mandatory to Implement AEAD Algorithms">
+    <section anchor="mti" title="Mandatory-to-Implement AEAD Algorithms">
       <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
       TLS_AES_128_GCM_SHA256 <xref target="GCM"></xref> cipher suite and
       SHOULD implement the TLS_AES_256_GCM_SHA384 <xref target="GCM"></xref>
       and TLS_CHACHA20_POLY1305_SHA256 <xref target="RFC8439"></xref> cipher
-      suites.</t>
+      suites. Note that these cipher suites are those required for
+      TLS-compliant applications (Section 9.1 of <xref
+      target="RFC8446"></xref>).</t>
 
       <t>SFFs MAY implement the aforementioned cipher suites.</t>
     </section>
@@ -392,10 +394,11 @@ Classifier---SFF1----SFF2---SFF3
       metadata encryption.</t>
 
       <section anchor="id" title="Key Identifier Context Header">
-        <t>Key Identifier Context Header is a variable length Key Identifier
-        object used to identify and deliver keys to SFC data plane elements.
-        This is a mandatory TLV that MUST be present if an integrity protected
-        and encrypted NSH solution is desired.</t>
+        <t>Key Identifier Context Header (<xref target="fig-id"></xref>) is a
+        variable length Key Identifier object used to identify and deliver
+        keys to SFC data plane elements. This is a mandatory TLV that MUST be
+        present if an integrity protected and encrypted NSH solution is
+        desired.</t>
 
         <t>This Context Header is helpful to accommodate deployments relying
         upon keying material per SFC/SFP. Also, the key needs to be updated
@@ -403,7 +406,7 @@ Classifier---SFF1----SFF2---SFF3
         key identifier helps in resolving the problem of synchronization of
         keying material.</t>
 
-        <figure>
+        <figure anchor="fig-id" title="Key Identifier Context Header">
           <artwork><![CDATA[      0                   1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -429,16 +432,17 @@ Classifier---SFF1----SFF2---SFF3
       </section>
 
       <section anchor="sequence" title="Sequence Number Context Header">
-        <t>Sequence Number Context Header conveys a 64-bit sequence number per
-        key identifier. In this specification, a sequence number needs to be
-        incremented every time NSH is included by the NSH imposer (for a given
-        SFC/SFP). The sequence number SHOULD NOT be incremented if an existing
-        NSH is being updated.</t>
+        <t>Sequence Number Context Header (<xref target="fig-seq"></xref>)
+        conveys a 64-bit sequence number per key identifier. In this
+        specification, a sequence number needs to be incremented every time
+        NSH is included by the NSH imposer (for a given SFC/SFP). The sequence
+        number SHOULD NOT be incremented if an existing NSH is being
+        updated.</t>
 
         <t>This is a mandatory TLV that MUST be present if an integrity
         protected and encrypted NSH solution is desired.</t>
 
-        <t><figure>
+        <t><figure anchor="fig-seq" title="Sequence Number Context Header">
             <artwork><![CDATA[      0                   1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
      +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -494,12 +498,12 @@ Classifier---SFF1----SFF2---SFF3
           Message Authentication Code (MAC) for the Service Path and
           unencrypted Context headers calculated using key K and optionally
           metadata encrypted K. The scope of this TLV is depicted in <xref
-          target="scope2"></xref>. This MAC flavor does not require sharing
+          target="scope1"></xref>. This MAC flavor does not require sharing
           keying material with SFFs. It does not require to recompute the MAC
           by each SFF because of TTL processing (and potential change of the
           transport encapsulation protocol).</t>
 
-          <figure anchor="scope1" title="Scope of MAC#">
+          <figure anchor="scope1" title="Scope of MAC#1">
             <artwork><![CDATA[        0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
@@ -636,7 +640,7 @@ Classifier---SFF1----SFF2---SFF3
         headers so that the information can be passed to next SFC-aware
         hops.</t>
 
-        <t>An SFC-aware SF or SFC proxy that receive an encrypted metadata,
+        <t>An SFC-aware SF or SFC proxy that receives an encrypted metadata,
         for which it is not allowed to decrypt the data, SHOULD keep that data
         unaltered when forwarding the packet upstream. <list style="empty">
             <t>Notes: (1) add more text to handle multiple instances of the
@@ -719,11 +723,11 @@ Classifier---SFF1----SFF2---SFF3
 
         <t>Processing of the Sequence Number field is at the discretion of the
         receiver, but all implementations MUST be capable of validating that
-        the Sequence Number that does not duplicate the Sequence Number of any
+        the Sequence Number does not duplicate the Sequence Number of any
         other NSH received during the life of the key identifier.</t>
 
         <t>The NSH imposer's counter is initialized to '0' when a new key
-        identifier is to be used . The sender increments the Sequence Number
+        identifier is to be used. The sender increments the Sequence Number
         counter for this key identifier and inserts the 64-bit value into the
         Sequence Number Context Header (<xref target="sequence"></xref>).
         Thus, the first NSH message (for a given service function chain) sent
@@ -781,7 +785,8 @@ Classifier---SFF1----SFF2---SFF3
       completely destroy the security benefits of the integrity protection
       scheme defined in this document.</t>
 
-      <t>NSH data are exposed to from to four primary attacks:</t>
+      <t>NSH data are exposed to threats by one or more out of up to four
+      primary attack situations:</t>
 
       <t><list style="symbols">
           <t>A man-in-the-middle attacker modifying NSH data.</t>
@@ -861,7 +866,8 @@ Classifier---SFF1----SFF2---SFF3
       https://datatracker.ietf.org/meeting/104/materials/slides-104-sfc-sfc-chair-slides-01
       (slide 7).</t>
 
-      <t>Thanks to Joel Halpern and Christian Jacquenet for the comments.</t>
+      <t>Thanks to Joel Halpern, Christian Jacquenet, and Dirk von Hugo for
+      the comments.</t>
     </section>
   </middle>
 
@@ -900,6 +906,8 @@ Classifier---SFF1----SFF2---SFF3
     <references title="Informative References">
       <?rfc include="reference.RFC.8459"?>
 
+      <?rfc include='reference.RFC.8446'?>
+
       <?rfc include='reference.RFC.7498'?>
 
       <?rfc include="reference.RFC.7258"?>
@@ -927,11 +935,12 @@ Classifier---SFF1----SFF2---SFF3
     </references>
 
     <section anchor="example" title="A Deployment Example with KMS">
-      <t>SFC-aware SFs do not share any credentials; instead, they trust a
-      third party, the KMS, with which they have or can establish shared
-      credentials. These pre-established trust relations are used to establish
-      a security association between SFC data plane elements within the
-      context of a given service chain.</t>
+      <t>In this deployment example, SFC-aware SFs do not share any
+      credentials; instead, they trust a third party, the KMS (Key Management
+      System), with which they have or can establish shared credentials. These
+      pre-established trust relations are used to establish a security
+      association between SFC data plane elements within the context of a
+      given service chain.</t>
 
       <t>The NSH imposer requests a secret key and key identifier from the
       KMS. The request message also includes identities of the SFC data plane

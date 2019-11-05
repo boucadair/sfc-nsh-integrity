@@ -1,0 +1,1016 @@
+<?xml version="1.0" encoding="US-ASCII"?>
+<!-- This template is for creating an Internet Draft using xml2rfc,
+     which is available here: http://xml.resource.org. -->
+<!DOCTYPE rfc SYSTEM "rfc2629.dtd" [
+<!-- One method to get references from the online citation libraries.
+     There has to be one entity for each item to be referenced. 
+     An alternate method (rfc include) is described in the references. -->
+]>
+<?xml-stylesheet type='text/xsl' href='rfc2629.xslt' ?>
+<!-- used by XSLT processors -->
+<!-- For a complete list and description of processing instructions (PIs), 
+     please see http://xml.resource.org/authoring/README.html. -->
+<!-- Below are generally applicable Processing Instructions (PIs) that most I-Ds might want to use.
+     (Here they are set differently than their defaults in xml2rfc v1.32) -->
+<?rfc strict="yes" ?>
+<!-- give errors regarding ID-nits and DTD validation -->
+<!-- control the table of contents (ToC) -->
+<?rfc toc="yes"?>
+<!-- generate a ToC -->
+<?rfc tocdepth="4"?>
+<!-- the number of levels of subsections in ToC. default: 3 -->
+<!-- control references -->
+<?rfc symrefs="yes"?>
+<!-- use symbolic references tags, i.e, [RFC2119] instead of [1] -->
+<?rfc sortrefs="yes" ?>
+<!-- sort the reference entries alphabetically -->
+<!-- control vertical white space 
+     (using these PIs as follows is recommended by the RFC Editor) -->
+<?rfc compact="yes" ?>
+<!-- do not start each main section on a new page -->
+<?rfc subcompact="no" ?>
+<!-- keep one blank line between list items -->
+<!-- end of list of popular I-D processing instructions -->
+<rfc category="std" docName="draft-rebo-sfc-nsh-integrity-01"
+     ipr="trust200902">
+  <front>
+    <title abbrev="Intgerity Protection for NSH">Integrity Protection for
+    Network Service Header (NSH) and Encryption of Sensitive Metadata</title>
+
+    <author fullname="Mohamed Boucadair" initials="M." surname="Boucadair">
+      <organization>Orange</organization>
+
+      <address>
+        <postal>
+          <street></street>
+
+          <city>Rennes</city>
+
+          <code>35000</code>
+
+          <country>France</country>
+        </postal>
+
+        <email>mohamed.boucadair@orange.com</email>
+      </address>
+    </author>
+
+    <author fullname="Tirumaleswar Reddy" initials="T." surname="Reddy">
+      <organization abbrev="McAfee">McAfee, Inc.</organization>
+
+      <address>
+        <postal>
+          <street>Embassy Golf Link Business Park</street>
+
+          <city>Bangalore</city>
+
+          <region>Karnataka</region>
+
+          <code>560071</code>
+
+          <country>India</country>
+        </postal>
+
+        <email>TirumaleswarReddy_Konda@McAfee.com</email>
+      </address>
+    </author>
+
+    <date day="04" month="November" year="2019" />
+
+    <workgroup>SFC</workgroup>
+
+    <abstract>
+      <t>This specification adds integrity protection and optional encryption
+      directly to Network Service Headers (NSH) used for Service Function
+      Chaining (SFC).</t>
+    </abstract>
+  </front>
+
+  <middle>
+    <section title="Introduction">
+      <t>Many advanced Service Functions (e.g., Performance Enhancement
+      Proxies, NATs, firewalls, etc.) are invoked for the delivery of
+      value-added services, particularly to meet various service objectives
+      such as IP address sharing, avoiding covert channels, detecting
+      Denial-of-Service (DoS) attacks and protecting network infrastructures
+      against them, network slicing, etc. Because of the proliferation of such
+      advanced SFs together with complex service deployment constraints that
+      demand more agile service delivery procedures, operators need to
+      rationalize their service delivery logics and master their complexity
+      while optimising service activation time cycles. The overall problem
+      space is described in <xref target="RFC7498"></xref>.</t>
+
+      <t><xref target="RFC7665"></xref> presents an architecture addressing
+      the problematic aspects of existing service deployments, including
+      topological dependence and configuration complexity. It also describes
+      an architecture for the specification, creation, and maintenance of
+      Service Function Chains (SFC) within a network. That is, how to define
+      an ordered set of SFs and ordering constraints that must be applied to
+      packets/flows selected as a result of traffic classification. <xref
+      target="RFC8300"></xref> specifies the SFC encapsulation: Network
+      Service Header (NSH).</t>
+
+      <!--CJ: I think I would summarize the above two paragraphes and stick to the point introduced in the first sentence below.-->
+
+      <t>NSH data is unauthenticated and unencrypted <xref
+      target="RFC8300"></xref>, forcing a service topology that requires
+      security and privacy to use a transport encapsulation that supports such
+      features (e.g., IPsec). The lack of such capability was reported during
+      the development of <xref target="RFC8300"></xref> and <xref
+      target="RFC8459"></xref>.</t>
+
+      <t>This specification fills that gap. Concretely, this document adds
+      integrity protection and optional encryption directly to NSH (<xref
+      target="overview"></xref>). Thus, NSH data do not have to rely upon an
+      underlying transport encapsulation for security and confidentiality.
+      Note that the payload encapsulated by NSH is not part of the NSH
+      data.</t>
+
+      <t>This specification introduces new Variable-Length Context Headers to
+      carry fields necessary for integrity protected and encrypted NSH data
+      (<xref target="new"></xref>), and is therefore only applicable to NSH MD
+      Type 0x02, as defined in Section 2.5 of <xref
+      target="RFC8300"></xref>.</t>
+    </section>
+
+    <section anchor="notation" title="Terminology">
+      <t>The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
+      "SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY", and
+      "OPTIONAL" in this document are to be interpreted as described in BCP 14
+      <xref target="RFC2119"></xref><xref target="RFC8174"></xref> when, and
+      only when, they appear in all capitals, as shown here.</t>
+
+      <t>This document makes use of the terms defined in <xref
+      target="RFC7665"></xref> and <xref target="RFC8300"></xref>.</t>
+
+      <t>The document defines the following terms:<list style="symbols">
+          <t>SFC data plane functional element: Refers to SFC-aware Service
+          Function, Service Function Forwarder (SFF), SFC proxy, or classifier
+          as defined in the SFC data plane architecture <xref
+          target="RFC7665"></xref>.</t>
+
+          <t>SFC Control Element: A logical entity that instructs one or more
+          SFC data plane functional elements on how to process NSH packets
+          within an SFC-enabled domain.</t>
+
+          <t>Key Identifier (or Ticket): A key identifier or kerberos-like
+          object used to identify and deliver keys to authorized entities.</t>
+
+          <t>NSH imposer: Refers to the SFC data plane element that is
+          entitled to impose NSH with the Context headers defined in this
+          document. </t>
+        </list></t>
+    </section>
+
+    <section anchor="req" title="Assumptions &amp; Basic Requirements">
+      <t>The NSH format is defined in Section 2 of <xref
+      target="RFC8300"></xref>; the NSH data can be spread over three
+      headers:<list style="symbols">
+          <t>Base Header: Provides information about the service header and
+          the payload protocol.</t>
+
+          <t>Service Path Header: Provides path identification and location
+          within a service path.</t>
+
+          <t>Context Header: Carries metadata (i.e., context data) along a
+          service path.</t>
+        </list></t>
+
+      <t>NSH allows to share context information (a.k.a., metadata) with
+      upstream SFC-aware data elements on a per SFC/SFP basis. To that
+      aim:<list style="symbols">
+          <t>The control plane is used to instruct the SFC classifier about
+          the set of context information to be supplied in the context of a
+          given chain.</t>
+
+          <t>The control plane is also used to instruct an SFC-aware SF about
+          any metadata it needs to attach to packets for a given SFC. This
+          instruction may occur any time during the validity lifetime of an
+          SFC/SFP. The control plane may indicate, for a given service
+          function chain, an order for consuming a set of contexts supplied in
+          a packet.</t>
+
+          <t>An SFC-aware SF can also be instructed about the behavior it
+          should adopt after consuming a context information that was supplied
+          in the NSH header. For example, the context can be maintained,
+          updated, or stripped.</t>
+
+          <t>An SFC proxy may be instructed about the behavior it should adopt
+          to process the context information that was supplied in the NSH
+          header on behalf of an SFC-unaware SF, e.g., the context can be
+          maintained or stripped.</t>
+
+          <t>The SFC proxy may also be instructed to add some new context
+          information into the NSH header on behalf of an SFC-unaware SF.</t>
+        </list></t>
+
+      <t>In reference to <xref target="op"></xref>, <list style="symbols">
+          <t>Classifiers, SFC-aware SFs, and SFC proxies are entitled to
+          update the context header: Only these elements must be able to
+          encrypt and decrypt a supplied context header.</t>
+
+          <t>Only SFC-aware SFs and SFC proxies are entitled to update the
+          Service Path header. The solution must provide integrity protection
+          for this header.</t>
+
+          <t>SFFs are entitled to modify the Base Path header (TTL value, for
+          example). The solution may provide integrity protection for the base
+          header.<list style="empty">
+              <t>Discussion Note: Check the level of this requirement with the
+              WG.</t>
+            </list></t>
+        </list></t>
+
+      <t><figure align="center" anchor="op" title="NSH Actions">
+          <artwork align="center"><![CDATA[+---------------+-----------------------+---------------+
+|               | Insert, remove, or    | Update        |
+|               | replace the NSH       | the NSH       |
+|               |                       |               |
+|SFC Data Plane +-------+-------+-------+-------+-------+
+|   Element     |       |       |       |Dec.   |Update |
+|               |Insert |Remove |Replace|Service|Context|
+|               |       |       |       |Index  |Header |
++---------------+-------+-------+-------+-------+-------+
+|               |  +    |       |   +   |       |   +   |
+|Classifier     |       |       |       |       |       |
++---------------+-------+-------+-------+-------+-------+
+|Service        |       |   +   |       |       |       |
+|Function       |       |       |       |       |       |
+|Forwarder (SFF)|       |       |       |       |       |
++---------------+-------+-------+-------+-------+-------+
+|Service        |       |       |       |   +   |   +   |
+|Function (SF)  |       |       |       |       |       |
++---------------+-------+-------+-------+-------+-------+
+|               |  +    |   +   |       |   +   |   +   |
+|SFC Proxy      |       |       |       |       |       |
++---------------+-------+-------+-------+-------+-------+]]></artwork>
+        </figure></t>
+
+      <t>The solution described in this document does not make any assumption
+      about the service function chains to be instantiated nor adds any
+      constraint about how NSH can be used within a domain. For example, in
+      reference to <xref target="ex"></xref>, the solution accommodates
+      deployment schemes such as: <list style="symbols">
+          <t>No metadata is inserted by the Classifier: it only proceeds with
+          integrity protection.</t>
+
+          <t>SF1 inserts two metadata M1 and M2 that it encrypts.</t>
+
+          <t>SF2 decrypts M1 and M2, strips M2, and then encrypts M1</t>
+
+          <t>SF3 decrypts M1 and then strips it.</t>
+        </list></t>
+
+      <t><figure anchor="ex" title="SFC-enabled Domain Example">
+          <artwork align="center"><![CDATA[             SF1            SF3
+              |              |
+Classifier---SFF1----SFF2---SFF3
+                      |
+                      SF2
+]]></artwork>
+        </figure></t>
+    </section>
+
+    <section anchor="overview" title="Solution Overview">
+      <t>The solution specified in the document allows for the following
+      functions: <list style="symbols">
+          <t>Encrypt all or a subset of metadata by Classifiers, SFC-aware
+          SFs, and SFC proxies:<vspace blankLines="1" />The control plane is
+          assumed to instruct the Classifier, SFC-aware SFs, and SFC proxy
+          with the set of context headers (privacy-sensitive metadata,
+          typically) that must be encrypted. <vspace blankLines="1" />The
+          control plane may also indicate the set of SFC data plane elements
+          that are entitled to supply a given context header (e.g., in
+          reference to their identifiers as assigned within the SFC-enabled
+          domain). It is out of the scope of this document to elaborate on how
+          such instructions are provided to the appropriate SFC data plane
+          elements, nor to detail the structure used to store the
+          instructions.<vspace blankLines="1" />The Service Path Header is not
+          encrypted because SFFs use Service Index (SI) in conjunction with
+          Service Path Identifier (SPI) for determining the next SF in the
+          path. </t>
+
+          <t>Provide integrity protection for NSH data:<vspace
+          blankLines="1" />Two flavors are supported: <list style="numbers">
+              <t>A first flavor where only the Service Path and Context
+              Headers are integrity protected. <vspace blankLines="1" />In
+              this case, the NSH imposer may be a Classifier, an SFC-aware SF,
+              or an SFC proxy.</t>
+
+              <t>A second flavor where the Base, Service Path, and Context
+              Headers are integrity protected. <vspace blankLines="1" />In
+              this case, the NSH imposer may be a Classifier, an SFC-aware SF,
+              an SFF, or an SFC proxy.</t>
+            </list><vspace blankLines="1" />In order to avoid the overhead of
+          multiple authentication tags and multiple keys, and to prevent SFFs
+          from acquiring the secret key to decrypt the metadata, the
+          recommendation is not to integrity protect the base header. Such
+          approach does not requrie to recompute the MAC each time TTL is
+          decremented by an SFF. As a reminder, an SFF is not supposed to act
+          on the metadata or look into the content of the metadata. <vspace
+          blankLines="1" />The integrity scope is explicitly signaled in the
+          NSH by means of a dedicated MD Type (<xref target="enc"></xref>).
+          <vspace blankLines="1" />In both schemes, the unencrypted metadata
+          is subject to integrity protection. </t>
+        </list></t>
+
+      <t>The Authenticated Encryption with Associated Data (AEAD) algorithm
+      <xref target="RFC5116"></xref> is used to provide NSH data integrity and
+      to encrypt privacy-sensitive metadata.</t>
+
+      <t>The AEAD algorithm to be used by SFC data plane elements may be
+      controlled using the control plane or other means. Mandatory to
+      implement AEAD algorithms are listed in <xref target="mti"></xref>.</t>
+
+      <t>AEAD algorithms take as input a single key (K), a Nonce, a plaintext
+      (P) (which contains the data to be encrypted and authenticated), and
+      "additional data" (A) (which contains the data to be authenticated, but
+      not encrypted) as described in Section 2.1 of <xref
+      target="RFC5116"></xref>.</t>
+
+      <t>AEAD functions provide a unified encryption and authentication
+      operation which turns plaintext into authenticated ciphertext and vice
+      versa. When the length of plaintext is zero, the AEAD algorithm acts as
+      a Message Authentication Code (MAC) on the "additional data" input. The
+      length of the AEAD output will generally be larger than the plaintext,
+      but by a magnitude that varies with the AEAD algorithm.</t>
+
+      <t>In order to decrypt and verify, the cipher takes as input the key
+      (K), Nonce, additional data, and the ciphertext. The output is either
+      the plaintext or an error indicating that the decryption failed as
+      described in Section 2.2 of <xref target="RFC5116"></xref>.</t>
+
+      <t>The procedure for the allocation/provisioning of the secret key (K)
+      and AEAD algorithm is outside the scope of this specification. As such,
+      this specification does not mandate the support of any specific
+      mechanism.</t>
+
+      <t>In order to accommodate deployments relying upon keying material per
+      SFC/SFP and also the need to update keys after encrypting given amount
+      of NSH data, this document uses key identifier (kid) to unambiguously
+      identify the appropriate keying material. Doing so allows to address the
+      problem of synchronization of keying material. A (non-normative) sample
+      deployment case to illustrate how kids are assigned is provided in <xref
+      target="example"></xref>.</t>
+
+      <t>The NSH data is protected using K and optionally metadata is
+      encrypted using K. New NSH Variable-Length Context Headers are defined
+      in <xref target="new"></xref> for NSH integrity protection and,
+      optionally, metadata encryption. Concretely, an NSH imposer includes (1)
+      the key identifier in NSH using the Key Identifier Context Header (<xref
+      target="id"></xref>), (2) a Sequence Number in Sequence Number Context
+      Header to protect against replay attacks (<xref target="seq"></xref>),
+      and (3) the Message Authentication Code (MAC) for the NSH data
+      (depending on the integrity protection scope) calculated using the
+      secret key (K) and optionally metadata encrypted K in 'MAC and Encrypted
+      Metadata Context' Header (<xref target="enc"></xref>). </t>
+
+      <t>An NSH data plane element that needs to check the integrity of the
+      NSH data uses the secret key (K) and AEAD algorithm for the key
+      identifier being carried in the NSH. </t>
+
+      <t>An SFC-aware SF or SFC proxy that needs to decrypt the metadata uses
+      the secret key (K) and the decryption algorithm for the key identifier
+      being carried in the NSH.</t>
+
+      <t><xref target="prorules"></xref> specifies the detailed procedure.
+      </t>
+    </section>
+
+    <section anchor="mti" title="Mandatory to Implement AEAD Algorithms">
+      <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
+      TLS_AES_128_GCM_SHA256 <xref target="GCM"></xref> cipher suite and
+      SHOULD implement the TLS_AES_256_GCM_SHA384 <xref target="GCM"></xref>
+      and TLS_CHACHA20_POLY1305_SHA256 <xref target="RFC8439"></xref> cipher
+      suites.</t>
+
+      <t>SFFs MAY implement the aforementioned cipher suites.</t>
+    </section>
+
+    <section anchor="new" title="New NSH Variable-Length Context Headers">
+      <t>This section specifies the format of new Variable-Langth Context
+      headers that are used for NSH integrity protection and, optionally,
+      metadata encryption.</t>
+
+      <section anchor="id" title="Key Identifier Context Header">
+        <t>Key Identifier Context Header is a variable length Key Identifier
+        object used to identify and deliver keys to SFC data plane elements.
+        This is a mandatory TLV that MUST be present if an integrity protected
+        and encrypted NSH solution is desired.</t>
+
+        <t>This Context Header is helpful to accommodate deployments relying
+        upon keying material per SFC/SFP. Also, the key needs to be updated
+        after the encryption of a certain amount of NSH data. <!--CJ: any suggestion about the "certain amount of NSH data"?-->The
+        key identifier helps in resolving the problem of synchronization of
+        keying material.</t>
+
+        <figure>
+          <artwork><![CDATA[      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |          Metadata Class       |      Type     |U|    Length   |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                           Key Identifier                      |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+ ]]></artwork>
+        </figure>
+
+        <t></t>
+
+        <t>The description of the fields is as follows:<list style="symbols">
+            <t>Metadata Class: MUST be set to 0x0 <xref
+            target="RFC8300"></xref>.</t>
+
+            <t>Type: TBD1 (See <xref target="IANA"></xref>)</t>
+
+            <t>Length: Variable.</t>
+
+            <t>Key Identifier: Carries the key identifier.</t>
+          </list></t>
+      </section>
+
+      <section anchor="sequence" title="Sequence Number Context Header">
+        <t>Sequence Number Context Header conveys a 64-bit sequence number per
+        key identifier. In this specification, a sequence number needs to be
+        incremented every time NSH is included by the NSH imposer (for a given
+        SFC/SFP). The sequence number SHOULD NOT be incremented if an existing
+        NSH is being updated.</t>
+
+        <t>This is a mandatory TLV that MUST be present if an integrity
+        protected and encrypted NSH solution is desired.</t>
+
+        <t><figure>
+            <artwork><![CDATA[      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |          Metadata Class       |      Type     |U|    Length   |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                        Sequence                               |
+     |                         Number                                |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+]]></artwork>
+          </figure></t>
+
+        <t>The description of the fields is as follows:<list style="symbols">
+            <t>Metadata Class: MUST be set to 0x0 <xref
+            target="RFC8300"></xref>.</t>
+
+            <t>Type: TBD2 (See <xref target="IANA"></xref>)</t>
+
+            <t>Length: 8 bytes</t>
+
+            <t>Sequence Number: Carries the sequence number.</t>
+          </list></t>
+      </section>
+
+      <section anchor="enc" title="MAC and Encrypted Metadata Context Header">
+        <t>This section defines two MAC and Encrypted Metadata Context
+        Headers; each having specific deployment constraints. Unlike the
+        flavor discussed in <xref target="enc1"></xref>, the scheme sketched
+        in <xref target="enc2"></xref> requires sharing keying material with
+        SFFs. Both TLVs have the same format as shown in <xref
+        target="enc"></xref>.</t>
+
+        <t><figure anchor="mac"
+            title="MAC and Encrypted Metadata Context Header">
+            <artwork><![CDATA[        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |          Metadata Class       |      Type     |U|    Length   |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       | Nonce Length  |                                               |
+       +-+-+-+-+-+-+-+-+                  Nonce                        ~
+       ~                                                               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |                                                               |
+       ~  Message Authentication Code and optional Encrypted Metadata  ~
+       |                                                               |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+]]></artwork>
+          </figure></t>
+
+        <t>The description of the fields is provided in the following
+        sub-sections.</t>
+
+        <section anchor="enc1" title="MAC#1 Context Header">
+          <t>MAC#1 Context Header is a variable-length TLV that carries the
+          Message Authentication Code (MAC) for the Service Path and
+          unencrypted Context headers calculated using key K and optionally
+          metadata encrypted K. The scope of this TLV is depicted in <xref
+          target="scope2"></xref>.</t>
+
+          <figure anchor="scope1" title="Scope of MAC#">
+            <artwork><![CDATA[        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+       |Ver|O|U|    TTL    |   Length  |U|U|U|U|MD Type| Next Protocol |    
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---+
+       |          Service Path Identifier              | Service Index |    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       ~                      Key Identifier                           ~    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       ~                      Sequence Number                          ~    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       |                                                               |    |
+       ~       Variable-Length Unencrypted Context Headers  (opt.)     ~    |
+       |                                                               |    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       |          Metadata Class       |      Type     |U|    Length   |    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       | Nonce Length  |                Nonce                          |    |
+ +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+ |     ~                    Metadata TLVs to encrypt                   ~    |
+ +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---+ 
+ |                                                                          |
+ |                                                                          | 
+ |                                           Integrity protected Portion----+
+ +----Encrypted Portion                                                                
+]]></artwork>
+          </figure>
+
+          <t></t>
+
+          <t>In reference to <xref target="mac"></xref>, the description of
+          the fields is as follows:<list style="symbols">
+              <t>Metadata Class: MUST be set to 0x0 <xref
+              target="RFC8300"></xref>.</t>
+
+              <t>Type: TBD3 (See <xref target="IANA"></xref>)</t>
+
+              <t>Nonce Length: Carries the length of the nonce (Section 4 of
+              <xref target="RFC5116"></xref>).</t>
+
+              <t>Nonce: Carries the nonce for AEAD algorithms as discussed in
+              Section 3 of <xref target="RFC5116"></xref>. The associated data
+              (defined in <xref target="RFC5116"></xref>) MUST be the Service
+              Path and unencrypted Context headers.</t>
+
+              <t>Message Authentication Code and optional Encrypted Metadata
+              covering the Service Path and unencrypted context headers.</t>
+            </list></t>
+        </section>
+
+        <section anchor="enc2" title="MAC#2 Context Header">
+          <t>MAC#2 Context Header is a variable-length TLV that carries the
+          MAC for the entire NSH calculated using key K and optionally
+          metadata encrypted key K. The scope of this TLV is depicted in <xref
+          target="scope2"></xref>. This MAC flavor does not require sharing
+          keying material with SFFs. It does not require to recompute the MAC
+          by each SFF because of TTL processing (and potential change of the
+          transport encapsulation protocol).</t>
+
+          <figure anchor="scope2" title="Scope of MAC#2">
+            <artwork><![CDATA[        0                   1                   2                   3
+        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---+
+       |Ver|O|U|    TTL    |   Length  |U|U|U|U|MD Type| Next Protocol |    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       |          Service Path Identifier              | Service Index |    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       ~                      Key Identifier                           ~    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       ~                      Sequence Number                          ~    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       |                                                               |    |
+       ~       Variable-Length Unencrypted Context Headers  (opt.)     ~    |
+       |                                                               |    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       |          Metadata Class       |      Type     |U|    Length   |    |
+       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+       | Nonce Length  |                Nonce                          |    |
+ +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
+ |     ~                    Metadata TLVs to encrypt                   ~    |
+ +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---+ 
+ |                                                                          |
+ |                                                                          | 
+ |                                           Integrity protected Portion----+
+ +----Encrypted Portion                                                                
+]]></artwork>
+          </figure>
+
+          <t></t>
+
+          <t>In reference to <xref target="mac"></xref>, the description of
+          the fields is as follows:<list style="symbols">
+              <t>Metadata Class: MUST be set to 0x0 <xref
+              target="RFC8300"></xref>.</t>
+
+              <t>Type: TBD4 (See <xref target="IANA"></xref>)</t>
+
+              <t>Nonce Length: Carries the length of the nonce (Section 4 of
+              <xref target="RFC5116"></xref>).</t>
+
+              <t>Nonce: Carries the nonce for AEAD algorithms as discussed in
+              Section 3 of <xref target="RFC5116"></xref>. The associated data
+              (defined in <xref target="RFC5116"></xref> as A) MUST be the
+              entire NSH data excluding the metadata to be encrypted.</t>
+
+              <t>Message Authentication Code and optional Encrypted Metadata
+              covering the entire NSH data excluding the metadata to be
+              encrypted.</t>
+            </list></t>
+        </section>
+      </section>
+    </section>
+
+    <section anchor="prorules" title="Processing Rules">
+      <t>The following sub-sections describe the processing rules for
+      integrity protected NSH and optionally encrypted metadata.</t>
+
+      <section title="Generic Behavior">
+        <t>This document adheres to the recommendations in <xref
+        target="RFC8300"></xref> for handling the context headers at both
+        ingress and egress SFC boundary nodes. That is, to strip such context
+        headers.</t>
+
+        <t>Failures to inject or validate the Context Headers defined in this
+        document SHOULD be logged locally while a notification alarm MAY be
+        sent to an SFC Control Element. The details of sending notification
+        alarms (i.e., the parameters affecting the transmission of the
+        notification alarms depend on the information in the context header
+        such as frequency, thresholds, and content in the alarm) SHOULD be
+        configurable by the control plane.</t>
+
+        <t>SFC-aware SFs and SFC proxies MAY be instructed to strip some
+        encrypted context headers from the packet or to pass the data to the
+        next SF in the service function chain after processing the content of
+        the context headers. If no instruction is provided, the default
+        behavior for intermediary SFC-aware nodes is to maintain such context
+        headers so that the information can be passed to next SFC-aware
+        hops.</t>
+
+        <t>An SFC-aware SF or SFC proxy that receive an encrypted metadata,
+        for which it is not allowed to decrypt the data, SHOULD keep that data
+        unaltered when forwarding the packet upstream. <list style="empty">
+            <t>Notes: (1) add more text to handle multiple instances of the
+            TLVs, (2) check which actual SFC element is doing what, ...</t>
+          </list></t>
+      </section>
+
+      <section title="MAC NSH Data Generation">
+        <t>When the length of encrypted metadata is zero, the AEAD algorithm
+        acts as a Message Authentication Code on the input A (defined in <xref
+        target="RFC5116"></xref>). An NSH imposer inserts a "MAC and Encrypted
+        Metadata" Context Header for integrity protection (<xref
+        target="enc"></xref>). </t>
+
+        <t>The NSH imposer computes the message integrity for the target NSH
+        data (depending on the integrity protection scope discussed in <xref
+        target="enc"></xref>) using K, Nonce, and AEAD algorithm. It inserts
+        the MAC in the "MAC and Encrypted Metadata" Context Header. The length
+        of the MAC is decided by the AEAD algorithm adopted for the particular
+        key identifier.</t>
+
+        <t>An entity in the service function path that intends to update NSH
+        MUST follow the above behavior to maintain message integrity of the
+        NSH for subsequent validations.</t>
+      </section>
+
+      <section title="Encrypted NSH Metadata Generation">
+        <t>An NSH imposer can encrypt all NSH metadata or only a subset of
+        metadata, i.e., encrypted and unencrypted metadata may be carried
+        simultaneously (<xref target="up"></xref>).</t>
+
+        <figure anchor="up"
+                title="NSH with Encrypted and Unencrypted Metadata">
+          <artwork><![CDATA[      0                   1                   2                   3
+      0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |Ver|O|U|    TTL    |   Length  |U|U|U|U|MD Type| Next Protocol |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |          Service Path Identifier              | Service Index |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+     ~                      Key Identifier                           ~
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     ~                      Sequence Number                          ~
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                                                               |
+     ~       Variable-Length Unencrypted Context Headers  (opt.)     ~
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+     |                                                               |
+     ~                   MAC and Encrypted Metadata                  ~
+     |                                                               |
+     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+]]></artwork>
+        </figure>
+
+        <t></t>
+
+        <t>In an SFC-enabled domain where pervasive monitoring <xref
+        target="RFC7258"></xref> is possible, NSH metadata MUST be encrypted
+        and MUST NOT reveal privacy sensitive metadata to attackers. Privacy
+        specific threats are discussed in Section 5.2 of <xref
+        target="RFC6973"></xref>.</t>
+
+        <t>Using K and AEAD algorithm, the NSH imposer encrypts the metadata
+        (as set by the control plane <xref target="req"></xref>) and inserts
+        the resulting payload in the "MAC and Encrypted Metadata" Context
+        Header (<xref target="enc"></xref>). The entire TLV carrying the
+        privacy-sensitive metadata is encrypted (that is, including the MD
+        Class, Type, Length, and associated metadata).</t>
+
+        <t>An authorized entity in the SFP that intends to update encrypted
+        metadata MUST also follow the aforementioned behavior.</t>
+      </section>
+
+      <section anchor="seq"
+               title="Sequence Number Validation for Replay Attack">
+        <t>A Sequence Number is an unsigned 64-bit counter value that
+        increases by one for each NSH created and is sent from the NSH
+        imposer, i.e., a per-key identifier packet sequence number. The
+        information is mandatory and MUST always be present.</t>
+
+        <t>Processing of the Sequence Number field is at the discretion of the
+        receiver, but all implementations MUST be capable of validating that
+        the Sequence Number that does not duplicate the Sequence Number of any
+        other NSH received during the life of the key identifier.</t>
+
+        <t>The NSH imposer's counter is initialized to '0' when a new key
+        identifier is to be used . The sender increments the Sequence Number
+        counter for this key identifier and inserts the 64-bit value into the
+        Sequence Number Context Header (<xref target="sequence"></xref>).
+        Thus, the first NSH message (for a given service function chain) sent
+        using a given key identifier will contain a Sequence Number of 1. The
+        imposer checks to ensure that the counter has not cycled<!--CJ: reset?-->
+        before inserting the new value in the Sequence Number Context Header.
+        In other words, the sender MUST NOT send a packet with a key
+        identifier if, by doing so, this would cause the Sequence Number to
+        rollover.</t>
+
+        <t>Sequence Number counters of all participating nodes MUST be reset
+        by establishing a new key identifier prior to the transmission of the
+        2^64th packet of NSH for a particular key identifier.</t>
+      </section>
+
+      <section title="NSH Data Validation">
+        <t>When an SFC data plane element receives an NSH, it MUST first
+        ensure that all mandatory TLVs required for NSH data integrity are
+        included. It MUST discard the message, if mandatory TLVs are absent or
+        if the Sequence Number is invalid (described in <xref
+        target="seq"></xref>). Otherwise, the SFC data plane element should
+        then proceed with data validation. The SFC data plane element computes
+        the message integrity for the target NSH data (depending on the
+        integrity protection scope discussed in <xref target="enc"></xref>)
+        using K and AEAD algorithm for the key identifier being carried in
+        NSH. If the value of the newly generated digest is identical to the
+        one enclosed in NSH, the SFC data plane element is certain that the
+        header has not been tampered and validation is therefore successful.
+        Otherwise, the NSH message MUST be discarded.</t>
+      </section>
+
+      <section title="Decryption of NSH Metadata">
+        <t>If entitled to consume a supplied encrypted metadata, an SFC-aware
+        SF or SFC proxy decrypts metadata using K and decryption algorithm for
+        the key identifier in NSH. AEAD algorithm has only a single output,
+        either a plaintext or a special symbol FAIL that indicates that the
+        inputs are not authentic (Section 2.2 of <xref
+        target="RFC5116"></xref>).</t>
+
+        <t>There are cryptographic limits on the amount of plaintext which can
+        be safely encrypted under a given set of keys. <xref
+        target="AEAD-LIMITS"></xref> provides an analysis of these limits
+        under the assumption that the underlying primitive (AES or ChaCha20)
+        has no weaknesses. The NSH imposer SHOULD do a secret key update prior
+        to reaching these limits.</t>
+      </section>
+    </section>
+
+    <section anchor="Security" title="Security Considerations">
+      <t>NSH security considerations are discussed in Section 8 of <xref
+      target="RFC8300"></xref>.</t>
+
+      <t>The interaction between the SFC-aware data plane elements and a key
+      management system MUST NOT be transmitted in clear since this would
+      completely destroy the security benefits of the integrity protection
+      scheme defined in this document.</t>
+
+      <t>NSH data are exposed to from to four primary attacks:</t>
+
+      <t><list style="symbols">
+          <t>A man-in-the-middle attacker modifying NSH data.</t>
+
+          <t>Attacker spoofing NSH data.</t>
+
+          <t>Attacker capturing and replaying NSH data.</t>
+
+          <t>NSH metadata revealing privacy sensitive information to
+          attackers.</t>
+        </list></t>
+
+      <t>In an SFC-enabled domain where the above attacks are possible, NSH
+      data MUST be integrity- and replay-protected, and privacy-sensitive NSH
+      metadata MUST be encrypted for confidentiality preservation
+      purposes.</t>
+
+      <t>The Base header is not encrypted. An active attacker can potentially
+      modify the Base header (e.g., decrement the TTL so the next SFF in the
+      SFP discards the NSH packet). In the meantime, an active attacker can
+      also drop NSH packets. AS such this is attack is not considered an
+      attack against the security mechanism specified in the document.</t>
+
+      <t>The scope of the integrity protected data depends on the MAC flavor
+      as discussed in the following sub-sections. </t>
+
+      <section title="MAC#1">
+        <t>No device other than the SFC-aware SFs in the SFC-enabled domain
+        should be able to update the integrity protected NSH data. Similarly,
+        no device other than the SFC-aware SFs and SFC proxies in the
+        SFC-enabled domain be able to decrypt and update the metadata. In
+        other words, if the SFC-aware SFs and SFC proxies in the SFC-enabled
+        domain are considered fully trusted to act on the NSH data, only they
+        can have access to privacy-sensitive NSH metadata and the keying
+        material used to integrity protect NSH and encrypt metadata.</t>
+      </section>
+
+      <section title="MAC#2">
+        <t>SFFs can detect whether an illegitimate node has altered the
+        content of the Base header. Such messages are discarded with
+        appropriate logs and alarms generated. </t>
+
+        <t>This approach requires SFFs to have access to the shared key (which
+        is used also for encrypting sensitive metadata). This may be
+        undesired. </t>
+
+        <t>A dedicated key may be used for authenticating the Base header,
+        while another key is used for the Service Path and Context Headers.
+        Nevertheless, such approach will induce an overhead of multiple
+        authentication tags.</t>
+      </section>
+    </section>
+
+    <section anchor="IANA" title="IANA Considerations">
+      <t>This document requests IANA to assign the following types from the
+      "NSH IETF-Assigned Optional Variable-Length Metadata Types" (0x0000 IETF
+      Base NSH MD Class) registry available at:
+      https://www.iana.org/assignments/nsh/nsh.xhtml#optional-variable-length-metadata-types.</t>
+
+      <t><figure>
+          <artwork><![CDATA[+-------+-------------------------------+----------------+
+| Value | Description                   | Reference      |
++-------+-------------------------------+----------------+
+| TBD1  | Key Identifier                | [ThisDocument] |
+| TBD2  | Sequence Number               | [ThisDocument] |
+| TBD3  | MAC and Encrypted Metadata#1  | [ThisDocument] |
+| TBD4  | MAC and Encrypted Metadata#2  | [ThisDocument] |
++-------+-------------------------------+----------------+]]></artwork>
+        </figure></t>
+    </section>
+
+    <section title="Acknowledgements">
+      <t>This document was edited as a follow up to the discussion in
+      IETF#104:
+      https://datatracker.ietf.org/meeting/104/materials/slides-104-sfc-sfc-chair-slides-01
+      (slide 7).</t>
+
+      <t>Thanks to Joel Halpern and Christian Jacquenet for the comments. </t>
+    </section>
+  </middle>
+
+  <!--  *****BACK MATTER ***** -->
+
+  <back>
+    <references title="Normative References">
+      <?rfc include="reference.RFC.8300"?>
+
+      <?rfc include='reference.RFC.7665'?>
+
+      <?rfc include='reference.RFC.2119'?>
+
+      <?rfc include='reference.RFC.8174'?>
+
+      <?rfc include='reference.RFC.5116'?>
+
+      <?rfc include='reference.RFC.8439'?>
+
+      <reference anchor="GCM">
+        <front>
+          <title>Recommendation for Block Cipher Modes of Operation:
+          Galois/Counter Mode (GCM) and GMAC</title>
+
+          <author initials="M." surname="Dworkin">
+            <organization></organization>
+          </author>
+
+          <date month="November" year="2007" />
+        </front>
+
+        <seriesInfo name="NIST" value="Special Publication 800-38D" />
+      </reference>
+    </references>
+
+    <references title="Informative References">
+      <?rfc include="reference.RFC.8459"?>
+
+      <?rfc include='reference.RFC.7498'?>
+
+      <?rfc include="reference.RFC.7258"?>
+
+      <?rfc include="reference.RFC.6973"?>
+
+      <reference anchor="AEAD-LIMITS"
+                 target="http://www.isg.rhul.ac.uk/~kp/TLS-AEbounds.pdf">
+        <front>
+          <title>Limits on Authenticated Encryption Use in TLS</title>
+
+          <author initials="A." surname="Luykx">
+            <organization></organization>
+          </author>
+
+          <author initials="K." surname="Paterson">
+            <organization></organization>
+          </author>
+
+          <date year="2016" />
+        </front>
+      </reference>
+
+      <!---->
+    </references>
+
+    <section anchor="example" title="A Deployment Example with KMS">
+      <t>SFC-aware SFs do not share any credentials; instead, they trust a
+      third party, the KMS, with which they have or can establish shared
+      credentials. These pre-established trust relations are used to establish
+      a security association between SFC data plane elements within the
+      context of a given service chain.</t>
+
+      <t>The NSH imposer requests a secret key and key identifier from the
+      KMS. The request message also includes identities of the SFC data plane
+      elements (including SFC-aware SFs and SFC proxies) authorized to receive
+      the keying material associated with the key identifier. Each SFC-aware
+      SF is referenced using an SF identifier that is unique within an
+      SFC-enabled domain. If the request is authorized, then KMS generates the
+      secret key (K), key identifier (kid), and returns them in a response
+      message. The key identifier may be self-contained (key encrypted in the
+      key identifier) or just a handle to some internal data structure within
+      the KMS.</t>
+
+      <t>The NSH imposer includes the key identifier in NSH data. The NSH data
+      is protected using K and optionally metadata is encrypted using K.
+      SFC-aware SFs and SFC proxies in the SFP forward the key identifier to
+      the KMS and request the KMS to retrieve the keying material. If the SFC
+      data plane element is authorized and the key identifier is valid, then
+      the KMS retrieves the secret key and AEAD algorithm associated with the
+      key identifier and conveys them to the SFC data plane element. The other
+      alternative approach is that KMS implicitly pushes the keying material
+      to, particularly, SFC-aware SFs and SFC proxies authorized by the NSH
+      imposer.</t>
+
+      <t>If the NSH imposer requests a new key and a new key identifier from
+      KMS, the request message from NSH imposer to KMS also includes
+      identities of SFC-aware SFs and SFC proxies authorized to receive the
+      keying material associated with the new key identifier. For subsequent
+      packets, the new key identifier will be conveyed in the NSH data, NSH
+      data will be integrity protected using the new secret key and optionally
+      NSH metadata is encrypted using the new secret key.</t>
+
+      <t><xref target="figure1"></xref> shows an example of an NSH imposer
+      requesting a secret key and key identifier from the KMS. The request
+      message includes identifiers of SF1 and SF2 Service Functions authorized
+      to receive keying material associated with the key identifier. KMS
+      returns the secret key (K) and key identifier in the response message.
+      The NSH imposer includes the key identifier in the NSH data. In this
+      example, SF1 in the SFP forwards the key identifier to the KMS and
+      requests the KMS for keying material associated with the key identifier
+      (In key resolve request message). If SF1 is authorized and the key
+      identifier is valid then KMS retrieves the key and AEAD algorithm
+      associated with the key identifier and conveys them to the SF1 (In
+      Resolve response message). Similarly, SF2 retrieves the keying material
+      associated with the key identifier from KMS. <list style="empty">
+          <t>Note: Update the example with the SFF</t>
+        </list></t>
+
+      <t>The exchange with KMS is not required if the necessary information is
+      pre-provisonned to the authorized SFC-aware SFs and SFC proxies.</t>
+
+      <t><figure anchor="figure1" title="Example of Interactions with KMS">
+          <artwork><![CDATA[
++----------------+            +-------+        +------+       +------+
+|   NSH Imposer  |            |  KMS  |        | SF1  |       | SF2  |
++----+-----------+            +----+--+        +----+-+       +--+---+
+     |                             |                |            |    
+     |                             |                |            |    
+     |   Key Request               |                |            |    
+     +---------------------------->|                |            |    
+     |                             |                |            |    
+     |   Key Response              |                |            |    
+     |<----------------------------+                |            |    
+     |                             |                |            |    
+     | Key Identifier sent in NSH  |                |            |    
+     +--------------------------------------------->+----------->|    
+     |                             |                |            |    
+     |                             | Key Resolve    |            |    
+     |                             |<---------------+            |    
+     |                             |                |            |    
+     |                             | Resolve response            |    
+     |                             +--------------->|            |    
+     |                             |                |            |    
+     |                             | Key resolve    |            |    
+     |                             |<----------------------------+    
+     |                             | Resolve response            |    
+     |                             +---------------------------->|    
+     |                             |                |            | ]]></artwork>
+        </figure></t>
+
+      <t></t>
+    </section>
+  </back>
+</rfc>

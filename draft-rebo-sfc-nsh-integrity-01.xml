@@ -813,7 +813,7 @@ Classifier---SFF1----SFF2---SFF3
         <t>An active attacker can potentially modify the Base header (e.g.,
         decrement the TTL so the next SFF in the SFP discards the NSH packet).
         In the meantime, an active attacker can also drop NSH packets. As
-        such, this is attack is not considered an attack against the security
+        such, this attack is not considered an attack against the security
         mechanism specified in the document.</t>
 
         <t>No device other than the SFC-aware SFs in the SFC-enabled domain

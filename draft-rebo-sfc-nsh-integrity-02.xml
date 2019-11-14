@@ -90,14 +90,14 @@
       </address>
     </author>
 
-    <date day="04" month="November" year="2019" />
+    <date day="18" month="November" year="2019" />
 
     <workgroup>SFC</workgroup>
 
     <abstract>
       <t>This specification adds integrity protection and optional encryption
-      directly to Network Service Headers (NSH) used for Service Function
-      Chaining (SFC).<!-- Encapsulation of NSH within NSH
+      of sensitive metadata directly to Network Service Headers (NSH) used for
+      Service Function Chaining (SFC).<!-- Encapsulation of NSH within NSH
 
 --></t>
     </abstract>
@@ -132,12 +132,16 @@
       security and privacy to use a transport encapsulation that supports such
       features (e.g., IPsec). The lack of such capability was reported during
       the development of <xref target="RFC8300"></xref> and <xref
-      target="RFC8459"></xref>.</t>
+      target="RFC8459"></xref>. The reader may refer to Section 4.2.1 of <xref
+      target="I-D.arkko-arch-internet-threat-model"></xref> for a discussion
+      on the need for more awareness about attacks from within closed domains.
+      </t>
 
       <t>This specification fills that gap. Concretely, this document adds
-      integrity protection and optional encryption directly to NSH (<xref
-      target="overview"></xref>). Thus, the NSH do not have to rely upon an
-      underlying transport encapsulation for security and confidentiality.</t>
+      integrity protection and optional encryption of sensitive metadata
+      directly to NSH (<xref target="overview"></xref>). Thus, the NSH do not
+      have to rely upon an underlying transport encapsulation for security and
+      confidentiality.</t>
 
       <t>This specification introduces new Variable-Length Context Headers to
       carry fields necessary for integrity protected NSH headers and encrypted
@@ -166,8 +170,8 @@
           SFC data plane functional elements on how to process NSH packets
           within an SFC-enabled domain.</t>
 
-          <t>Key Identifier (or Ticket): A key identifier or kerberos-like
-          object used to identify and deliver keys to authorized entities.</t>
+          <t>Key Identifier: A key identifier or kerberos-like object used to
+          identify and deliver keys to authorized entities.</t>
 
           <t>NSH data: The NSH is composed of a Base Header, a Service Path
           Header, and optional Context Headers. NSH data refers to all the
@@ -175,7 +179,7 @@
           realize a Service Function Path (SFP).</t>
 
           <t>NSH imposer: Refers to the SFC data plane element that is
-          entitled to impose NSH with the Context headers defined in this
+          entitled to impose NSH with the Context Headers defined in this
           document.</t>
         </list></t>
     </section>
@@ -232,10 +236,11 @@
           for this header.</t>
 
           <t>SFFs are entitled to modify the Base Path header (TTL value, for
-          example). The solution MAY provide integrity protection for the base
-          header. As a reminder, an SFF is not supposed to act on the Context
-          Header or look into the content of the Context Header.<list
-              style="empty">
+          example). Nevertheless, SFFs are not supposed to act on the Context
+          Header or look into the content of the Context Header. The solution
+          MAY provide integrity protection for the base header. The
+          implications of disabling such checks are discussed in <xref
+          target="mac1"></xref>.<list style="empty">
               <t>Discussion Note: Check the level of this requirement with the
               WG.</t>
             </list></t>
@@ -271,14 +276,18 @@
       constraint about how NSH can be used within a domain. For example, in
       reference to <xref target="ex"></xref>, the solution accommodates
       deployment schemes such as: <list style="symbols">
-          <t>No metadata is inserted by the Classifier: it only proceeds with
-          integrity protection.</t>
+          <t>No Context Header is inserted by the Classifier: it only proceeds
+          with the NSH integrity protection. The NSH encpasulated packet is
+          then forwarded to to the next hop following <xref
+          target="RFC7665"></xref>. </t>
 
-          <t>SF1 inserts two metadata M1 and M2 that it encrypts.</t>
+          <t>SF1 inserts two Context Headers M1 and M2 that it encrypts.</t>
 
-          <t>SF2 decrypts M1 and M2, strips M2, and then encrypts M1</t>
+          <t>SF2 decrypts M1 and M2, strips M2 (because its instructed to do
+          so via the SFC control plane), and then encrypts M1.</t>
 
-          <t>SF3 decrypts M1 and then strips it.</t>
+          <t>SF3 decrypts M1 and then strips it. The packet is then forwarded
+          back to SFF3.</t>
         </list></t>
 
       <t><figure anchor="ex" title="SFC-enabled Domain Example">
@@ -292,123 +301,262 @@ Classifier---SFF1----SFF2---SFF3
     </section>
 
     <section anchor="overview" title="Solution Overview">
-      <t>The solution specified in the document allows for the following
-      functions: <list style="symbols">
-          <t>Encrypt all or a subset of metadata by Classifiers, SFC-aware
-          SFs, and SFC proxies:<vspace blankLines="1" />The control plane is
-          assumed to instruct the Classifier, SFC-aware SFs, and SFC proxy
-          with the set of context headers (privacy-sensitive metadata,
-          typically) that must be encrypted. <vspace blankLines="1" />The
-          control plane may also indicate the set of SFC data plane elements
-          that are entitled to supply a given context header (e.g., in
-          reference to their identifiers as assigned within the SFC-enabled
+      <t></t>
+
+      <section title="Supported Security Services">
+        <t>This specification provides the functions described in the
+        following sub-sections: </t>
+
+        <section title="Encrypt All or a Subset of Metadata">
+          <t>The solution allows to encrypt all or a subset of metadata (that
+          is carried in NSH Context Headers) by Classifiers, SFC-aware SFs,
+          and SFC proxies. As depicted in <xref target="eroles"></xref>, SFFs
+          are not involved in data encryption. </t>
+
+          <texttable align="center" anchor="eroles"
+                     title="Encryption Function Supported by SFC Data Plane Elements">
+            <ttcol>Data Plane Element</ttcol>
+
+            <ttcol>Encryption</ttcol>
+
+            <c>Classifier</c>
+
+            <c>Yes</c>
+
+            <c>SFF</c>
+
+            <c>No</c>
+
+            <c>SFC-aware SF</c>
+
+            <c>Yes</c>
+
+            <c>SFC Proxy</c>
+
+            <c>Yes</c>
+
+            <c>SFC-unaware SF</c>
+
+            <c>No</c>
+          </texttable>
+
+          <t>The control plane is assumed to instruct the Classifier,
+          SFC-aware SFs, and SFC proxy with the set of Context Headers
+          (privacy-sensitive metadata, typically) that must be encrypted.
+          Encryption keying material is only provided to these SFC data
+          elements. In particular, SFFs are not provisioned with the
+          encryption keying material. </t>
+
+          <t>The control plane may also indicate the set of SFC data plane
+          elements that are entitled to supply a given context header (e.g.,
+          in reference to their identifiers as assigned within the SFC-enabled
           domain). It is out of the scope of this document to elaborate on how
           such instructions are provided to the appropriate SFC data plane
           elements, nor to detail the structure used to store the
-          instructions.<vspace blankLines="1" />The Service Path Header is not
-          encrypted because SFFs use Service Index (SI) in conjunction with
-          Service Path Identifier (SPI) for determining the next SF in the
-          path.</t>
+          instructions.</t>
 
-          <t>Provide integrity protection for NSH data:<vspace
-          blankLines="1" />Two flavors are supported: <list style="numbers">
-              <t>A first flavor where only the Service Path and Context
-              Headers are integrity protected. <vspace blankLines="1" />In
-              this case, the NSH imposer may be a Classifier, an SFC-aware SF,
-              or an SFC proxy.</t>
+          <t>The Service Path Header is not encrypted because SFFs use Service
+          Index (SI) in conjunction with Service Path Identifier (SPI) for
+          determining the next SF in the path.</t>
+        </section>
 
-              <t>A second flavor where the Base, Service Path, and Context
-              Headers are integrity protected. <vspace blankLines="1" />In
-              this case, the NSH imposer may be a Classifier, an SFC-aware SF,
-              an SFF, or an SFC proxy.</t>
-            </list><vspace blankLines="1" />The integrity scope is explicitly
-          signaled in the NSH by means of a dedicated MD Type (<xref
-          target="enc"></xref>). <vspace blankLines="1" />In both flavors, the
-          unencrypted metadata is subject to integrity protection.</t>
-        </list></t>
+        <section title="Integrity Protection">
+          <t>The solution provides integrity protection for NSH data. Two
+          flavors are supported.</t>
 
-      <t>The authenticated encryption algorithm defined in <xref
-      target="RFC7518"></xref> is used to provide NSH data integrity and to
-      encrypt Context Headers carrying privacy-sensitive metadata. The
-      authenticated encryption algorithm provides a unified encryption and
-      authentication operation which turns plaintext into authenticated
-      ciphertext and vice versa. The generation of secondary keys MAC_KEY and
-      ENC_KEY from the secret key K is discussed in Section 5.2.2.1 of <xref
-      target="RFC7518"></xref>. The ENC_KEY is used for encrypting the Context
-      Headers and the message integrity of the NSH data is calculated using
-      the MAC_KEY. If the Context Headers are not encrypted, the Hashed
-      Message Authentication Mode (HMAC) algorithm discussed in <xref
-      target="RFC4868"></xref> is used to integrity protect the NSH data.</t>
+          <t>A first flavor where all NSH data except the Base Header are
+          integrity protected (<xref target="first"></xref>). In this case,
+          the NSH imposer may be a Classifier, an SFC-aware SF, or an SFC
+          proxy. SFFs are not thus provided with authentication material.
+          Further details are discussed in <xref target="enc1"></xref>.<figure
+              anchor="first" title="First Integrity Flavor">
+              <artwork><![CDATA[   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+   |                Transport Encapsulation                |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
+   |                Base Header                            |  |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  N
+|  |                Service Path Header                    |  S
+|  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  H
+|  |                Context Header(s)                      |  |
+|  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
+|  |                Original Packet / Frame                |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                          
++------Scope of integrity protected data                                                
+]]></artwork>
+            </figure></t>
 
-      <t>The advantage of using the authenticated encryption algorithm is
-      SFC-aware SFs and SFC proxies only need to re-compute the message
-      integrity of the NSH data after decrementing the Service Index (SI) and
-      do not have to re-compute the ciphertext. The other advantage is in both
-      the flavors discussed above is SFFs do not have access to the ENC_KEY
-      and cannot act on the encrypted Context Headers and, only in case of the
-      second flavor, SFFs do have access to the MAC_KEY. Similarly, an
-      SFC-aware SF or SFC proxy not allowed to decrypt the Context Headers
-      will not have access to the ENC_KEY.</t>
+          <t></t>
 
-      <t>The authenticated encryption algorithm or HMAC algorithm to be used
-      by SFC data plane elements may be controlled using the control plane or
-      other means. Mandatory to implement authenticated encryption and HMAC
-      algorithms are listed in <xref target="mti"></xref>.</t>
+          <t>A second flavor where all NSH data, including the Base Header,
+          are integrity protected (<xref target="sec"></xref>). In this case,
+          the NSH imposer may be a Classifier, an SFC-aware SF, an SFF, or an
+          SFC proxy. Further details are discussed in <xref
+          target="enc2"></xref>.</t>
 
-      <t>The authenticated encryption process takes as input four octet
-      strings: a secret key K, a plaintext P, Additional Authenticated Data A
-      (which contains the data to be authenticated, but not encrypted), and an
-      Initialization Vector IV. The ciphertext value E and the Authentication
-      Tag value T are provided as outputs. In order to decrypt and verify, the
-      cipher takes as input K, IV, A, T and E. The output is either the
-      plaintext or an error indicating that the decryption failed as described
-      in Section 5.2.2.2 of <xref target="RFC7518"></xref>.</t>
+          <t><figure anchor="sec" title="Second Integrity Flavor">
+              <artwork><![CDATA[   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ 
+   |                Transport Encapsulation                |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
+|  |                Base Header                            |  |
+|  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  N
+|  |                Service Path Header                    |  S
+|  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  H
+|  |                Context Header(s)                      |  |
+|  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
+|  |                Original Packet / Frame                |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+|                                           
++----Scope of integrity protected data 
+                                              
+]]></artwork>
+            </figure></t>
 
-      <t>The procedure for the allocation/provisioning of K and authenticated
-      encryption algorithm or MAC_KEY and HMAC algorithm is outside the scope
-      of this specification. As such, this specification does not mandate the
-      support of any specific mechanism.</t>
+          <t>The integrity protection scope is explicitly signaled to
+          SFC-aware SFs and SFC proxies in the NSH by means of a dedicated MD
+          Type (<xref target="enc"></xref>). </t>
 
-      <t>In order to accommodate deployments relying upon keying material per
-      SFC/SFP and also the need to update keys after encrypting NSH data for
-      certain amount of time, this document uses key identifier (kid) to
-      unambiguously identify the appropriate keying material. Doing so allows
-      to address the problem of synchronization of keying material. A
-      (non-normative) sample deployment case to illustrate how kids are
-      assigned is provided in <xref target="example"></xref>. Additional
-      information on manual vs. automated key management and when one should
-      be used over the other can be found in <xref
-      target="RFC4107"></xref>.</t>
+          <t>In both flavors, the unencrypted metadata and the packet on which
+          NSH is imposed are subject to integrity protection.</t>
 
-      <t>New NSH Variable-Length Context Headers are defined in <xref
-      target="new"></xref> for NSH data integrity protection and, optionally,
-      encryption of Context Headers carrying privacy-sensitive metadata.
-      Concretely, an NSH imposer includes (1) the key identifier in NSH using
-      the Key Identifier Context Header (<xref target="id"></xref>), (2) the
-      timestamp in Timestamp Context Header to protect against replay attacks
-      (<xref target="time"></xref>), and (3) the Message Authentication Code
-      (MAC) for the target NSH data (depending on the integrity protection
-      scope) calculated using the MAC_KEY and optionally Context Headers
-      encrypted using ENC_KEY in 'MAC and Encrypted Metadata Context' Header
-      (<xref target="enc"></xref>).</t>
+          <t><xref target="iroles"></xref> lists the roles of SFC data plane
+          elements in providing integrity protection for the NSH.</t>
 
-      <t>An NSH data plane element that needs to check the integrity of the
-      NSH data uses the MAC_KEY and the HMAC algorithm for the key identifier
-      being carried in the NSH.</t>
+          <texttable align="center" anchor="iroles"
+                     title="Integrity Protection Supported by SFC Data Plane Elements">
+            <ttcol>Data Plane Element</ttcol>
 
-      <t>An SFC-aware SF or SFC proxy that needs to decrypt the metadata uses
-      K and the decryption algorithm for the key identifier being carried in
-      the NSH.</t>
+            <ttcol>Integrity Protection</ttcol>
 
-      <t><xref target="prorules"></xref> specifies the detailed procedure.</t>
+            <c>Classifier</c>
+
+            <c>Yes</c>
+
+            <c>SFF</c>
+
+            <c>No (first flavor); Yes (second flavor)</c>
+
+            <c>SFC-aware SF</c>
+
+            <c>Yes</c>
+
+            <c>SFC Proxy</c>
+
+            <c>Yes</c>
+
+            <c>SFC-unaware SF</c>
+
+            <c>No</c>
+          </texttable>
+        </section>
+      </section>
+
+      <section title="One Secret Key, Two Security Services ">
+        <t>The authenticated encryption algorithm defined in <xref
+        target="RFC7518"></xref> is used to provide NSH data integrity and to
+        encrypt Context Headers carrying privacy-sensitive metadata. The
+        authenticated encryption algorithm provides a unified encryption and
+        authentication operation which turns plaintext into authenticated
+        ciphertext and vice versa. The generation of secondary keys MAC_KEY
+        and ENC_KEY from the secret key K is discussed in Section 5.2.2.1 of
+        <xref target="RFC7518"></xref>. The ENC_KEY is used for encrypting the
+        Context Headers and the message integrity of the NSH data is
+        calculated using the MAC_KEY. If the Context Headers are not
+        encrypted, the Hashed Message Authentication Mode (HMAC) algorithm
+        discussed in <xref target="RFC4868"></xref> is used to integrity
+        protect the NSH data.</t>
+
+        <t>The advantage of using the authenticated encryption algorithm is
+        that SFC-aware SFs and SFC proxies only need to re-compute the message
+        integrity of the NSH data after decrementing the Service Index (SI)
+        and do not have to re-compute the ciphertext. The other advantage is
+        in both the flavors discussed above is SFFs do not have access to the
+        ENC_KEY and cannot act on the encrypted Context Headers and, only in
+        case of the second flavor, SFFs do have access to the MAC_KEY.
+        Similarly, an SFC-aware SF or SFC proxy not allowed to decrypt the
+        Context Headers will not have access to the ENC_KEY.</t>
+
+        <t>The authenticated encryption algorithm or HMAC algorithm to be used
+        by SFC data plane elements is typically controlled using the SFC
+        control plane. Mandatory to implement authenticated encryption and
+        HMAC algorithms are listed in <xref target="mti"></xref>.</t>
+
+        <t>The authenticated encryption process takes as input four octet
+        strings: a secret key K, a plaintext P, Additional Authenticated Data
+        A (which contains the data to be authenticated, but not encrypted),
+        and an Initialization Vector IV. The ciphertext value E and the
+        Authentication Tag value T are provided as outputs. In order to
+        decrypt and verify, the cipher takes as input K, IV, A, T and E. The
+        output is either the plaintext or an error indicating that the
+        decryption failed as described in Section 5.2.2.2 of <xref
+        target="RFC7518"></xref>.</t>
+      </section>
+
+      <section title="Key Management">
+        <t>The procedure for the allocation/provisioning of secret keys (K)
+        and authenticated encryption algorithm or MAC_KEY and HMAC algorithm
+        is outside the scope of this specification. As such, this
+        specification does not mandate the support of any specific mechanism.
+        </t>
+
+        <t>The documents does not assume nor preclude the following:<list
+            style="symbols">
+            <t>The same keying material is used for all the service functions
+            used within an SFC-enabled domain.</t>
+
+            <t>Distinct keying material is used per SFP.</t>
+
+            <t>Per-tenant keys are used.</t>
+          </list></t>
+
+        <t>In order to accommodate deployments relying upon keying material
+        per SFC/SFP and also the need to update keys after encrypting NSH data
+        for certain amount of time, this document uses key identifier (kid) to
+        unambiguously identify the appropriate keying material. Doing so
+        allows to address the problem of synchronization of keying material.
+        </t>
+
+        <t>A (non-normative) sample deployment case to illustrate how kids are
+        assigned is provided in <xref target="example"></xref>. Additional
+        information on manual vs. automated key management and when one should
+        be used over the other can be found in <xref
+        target="RFC4107"></xref>.</t>
+      </section>
+
+      <section title="New NSH Variable-Length Context Headers">
+        <t>New NSH Variable-Length Context Headers are defined in <xref
+        target="new"></xref> for NSH data integrity protection and,
+        optionally, encryption of Context Headers carrying privacy-sensitive
+        metadata. Concretely, an NSH imposer includes (1) the key identifier
+        in NSH using the Key Identifier Context Header (<xref
+        target="id"></xref>), (2) the timestamp in Timestamp Context Header to
+        protect against replay attacks (<xref target="time"></xref>), and (3)
+        the Message Authentication Code (MAC) for the target NSH data
+        (depending on the integrity protection scope) calculated using the
+        MAC_KEY and optionally Context Headers encrypted using ENC_KEY in 'MAC
+        and Encrypted Metadata Context' Header (<xref
+        target="enc"></xref>).</t>
+
+        <t>An NSH data plane element that needs to check the integrity of the
+        NSH data uses the MAC_KEY and the HMAC algorithm for the key
+        identifier being carried in the NSH.</t>
+
+        <t>An SFC-aware SF or SFC proxy that needs to decrypt the metadata
+        uses ENC_Key and the decryption algorithm for the key identifier being
+        carried in the NSH.</t>
+
+        <t><xref target="prorules"></xref> specifies the detailed
+        procedure.</t>
+      </section>
     </section>
 
     <section anchor="mti"
-             title="Mandatory-to-Implement authenticated encryption and HMAC Algorithms">
+             title="Mandatory-to-Implement Authenticated Encryption and HMAC Algorithms">
       <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
       AES_128_CBC_HMAC_SHA_256 algorithm and SHOULD implement the
-      AES_192_CBC_HMAC_SHA_384 and AES_256_CBC_HMAC_SHA_512 algorithms.
-      Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
+      AES_192_CBC_HMAC_SHA_384 and AES_256_CBC_HMAC_SHA_512 algorithms. </t>
+
+      <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
       HMAC-SHA-256-128 algorithm and SHOULD implement the HMAC-SHA-384-192 and
       HMAC-SHA-512-256 algorithms.</t>
 
@@ -422,10 +570,10 @@ Classifier---SFF1----SFF2---SFF3
       Context Headers encryption.</t>
 
       <section anchor="id" title="Key Identifier Context Header">
-        <t>Key Identifier Context Header (<xref target="fig-id"></xref>) is a
-        variable length Key Identifier object used to identify and deliver
-        keys to SFC data plane elements. Sending this Context Header is
-        REQUIRED for compliance with this specification</t>
+        <t>The Key Identifier Context Header (<xref target="fig-id"></xref>)
+        is a variable length Key Identifier object used to identify and
+        deliver keys to SFC data plane elements. Sending this Context Header
+        is REQUIRED for compliance with this specification.</t>
 
         <t>This Context Header is helpful to accommodate deployments relying
         upon keying material per SFC/SFP. The key identifier helps in
@@ -459,9 +607,9 @@ Classifier---SFF1----SFF2---SFF3
       </section>
 
       <section anchor="sequence" title="Timestamp Context Header">
-        <t>Timestamp Context Header (<xref target="fig-seq"></xref>) conveys a
-        64-bit timestamp value. Sending this Context Header is REQUIRED for
-        compliance with this specification.</t>
+        <t>The Timestamp Context Header (<xref target="fig-seq"></xref>)
+        conveys a 64-bit timestamp value. Sending this Context Header is
+        REQUIRED for compliance with this specification.</t>
 
         <t><figure anchor="fig-seq" title="Sequence Number Context Header">
             <artwork><![CDATA[      0                   1                   2                   3
@@ -483,7 +631,9 @@ Classifier---SFF1----SFF2---SFF3
 
             <t>Length: 8 bytes</t>
 
-            <t>Timestamp: Carries the timestamp value.</t>
+            <t>Timestamp: Carries an unsigned 64-bit integer value that is
+            expressed in seconds relative to 1970-01-01T00:00Z in UTC time
+            <xref target="RFC7049"></xref>. </t>
           </list></t>
       </section>
 
@@ -507,7 +657,7 @@ Classifier---SFF1----SFF2---SFF3
        ~                                                               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
        |                                                               |
-       ~  Message Authentication Code and optional Encrypted           ~  
+       |     Message Authentication Code and optional Encrypted        |
        ~                   Context Headers                             ~
        |                                                               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+]]></artwork>
@@ -518,46 +668,47 @@ Classifier---SFF1----SFF2---SFF3
 
         <section anchor="enc1" title="MAC#1 Context Header">
           <t>MAC#1 Context Header is a variable-length TLV that carries the
-          Message Authentication Code (MAC) for the Service Path and Context
-          headers calculated using MAC_KEY and optionally Context Headers
-          encrypted using ENC_KEY. The scope of this TLV is depicted in <xref
-          target="scope1"></xref>. This MAC flavor does not require sharing
-          MAC_KEY with SFFs. It does not require to re-compute the MAC by each
-          SFF because of TTL processing (and potential change of the transport
-          encapsulation protocol). Section 8 discusses the possible threat
-          associated with this flavor.</t>
+          Message Authentication Code (MAC) for the Service Path, Context
+          headers calculated, and the inner NSH packet using MAC_KEY and
+          optionally Context Headers encrypted using ENC_KEY. The scope of
+          this TLV is depicted in <xref target="scope1"></xref>. </t>
+
+          <t>This MAC flavor does not require sharing MAC_KEY with SFFs. It
+          does not require to re-compute the MAC by each SFF because of TTL
+          processing. <xref target="mac1"></xref> discusses the possible
+          threat associated with this flavor.</t>
 
           <figure anchor="scope1" title="Scope of MAC#1">
-            <artwork><![CDATA[        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
-       |Ver|O|U|    TTL    |   Length  |U|U|U|U|MD Type| Next Protocol |    
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---+
-       |          Service Path Identifier              | Service Index |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       ~                      Key Identifier                           ~    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       ~                      Timestamp                                ~    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       |                                                               |    |
-       ~       Variable-Length Unencrypted Context Headers  (opt.)     ~    |
-       |                                                               |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       |          Metadata Class       |      Type     |U|    Length   |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       | IV Length   |           Initialization Vector                 |    |
- +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
- |     ~              Context Header TLVs to encrypt                   ~    |
- +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    | 
- |     |                                                               |    |
- |     ~               Packet on which NSH is imposed                  ~    |
- |     |                                                               |    |
- |     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---|
- |                                                                          |
- |                                                                          |
- |                                                                          | 
- |                                           Integrity protected Portion----+
- +----Encrypted Portion                                                                
+            <artwork><![CDATA[    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+   |Ver|O|U|    TTL    |   Length  |U|U|U|U|MD Type| Next Protocol |    
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<--+
+   |          Service Path Identifier              | Service Index |   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   ~                      Key Identifier                           ~   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   ~                      Timestamp                                ~   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   |                                                               |   |
+   ~       Variable-Length Unencrypted Context Headers  (opt.)     ~   |
+   |                                                               |   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   |          Metadata Class       |      Type     |U|    Length   |   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   | IV Length   |           Initialization Vector                 |   |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+|  ~              Context Header TLVs to encrypt                   ~   |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   | 
+|  |                                                               |   |
+|  ~               Inner Packet on which NSH is imposed            ~   |
+|  |                                                               |   |
+|  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<--|
+|                                                                      |
+|                                                                      |
+|                                                                      | 
+|                                       Integrity protected Portion----+
++----Encrypted Portion                                                                
 ]]></artwork>
           </figure>
 
@@ -581,11 +732,11 @@ Classifier---SFF1----SFF2---SFF3
               target="RFC7518"></xref>.</t>
 
               <t>The Additional Authenticated Data (defined in <xref
-              target="RFC7518"></xref>) MUST be the Service Path and
-              unencrypted Context headers.</t>
+              target="RFC7518"></xref>) MUST be the Service Path header, the
+              unencrypted Context headers, and the inner NSH packet.</t>
 
               <t>Message Authentication Code covering the entire NSH data
-              excluding the base header.</t>
+              excluding the Base header.</t>
             </list></t>
         </section>
 
@@ -596,37 +747,37 @@ Classifier---SFF1----SFF2---SFF3
           depicted in <xref target="scope2"></xref>.</t>
 
           <figure anchor="scope2" title="Scope of MAC#2">
-            <artwork><![CDATA[        0                   1                   2                   3
-        0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---+
-       |Ver|O|U|    TTL    |   Length  |U|U|U|U|MD Type| Next Protocol |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       |          Service Path Identifier              | Service Index |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       ~                      Key Identifier                           ~    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       ~                      Timestamp                                ~    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       |                                                               |    |
-       ~       Variable-Length Unencrypted Context Headers  (opt.)     ~    |
-       |                                                               |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       |          Metadata Class       |      Type     |U|    Length   |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       | Nonce Length  |                Nonce                          |    |
-       +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    |
-       | IV Length   |           Initialization Vector                 |    |
- +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    + 
- |     ~              Context Header TLVs to encrypt                   ~    |
- +---->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+    +
- |     |                                                               |    |
- |     ~               Packet on which NSH is imposed                  ~    |
- |     |                                                               |    |
- |     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<---|
- |                                                                          |
- |                                                                          | 
- |                                           Integrity protected Portion----+
- +----Encrypted Portion                                                                
+            <artwork><![CDATA[    0                   1                   2                   3
+    0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<--+
+   |Ver|O|U|    TTL    |   Length  |U|U|U|U|MD Type| Next Protocol |   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   |          Service Path Identifier              | Service Index |   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   ~                      Key Identifier                           ~   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   ~                      Timestamp                                ~   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   |                                                               |   |
+   ~       Variable-Length Unencrypted Context Headers  (opt.)     ~   |
+   |                                                               |   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   |          Metadata Class       |      Type     |U|    Length   |   |
+   +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+   | IV Length   |           Initialization Vector                 |   |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   |
+|  ~              Context Header TLVs to encrypt                   ~   |
++->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+   | 
+|  |                                                               |   |
+|  ~               Inner Packet on which NSH is imposed            ~   |
+|  |                                                               |   |
+|  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+<--|
+|                                                                      |
+|                                                                      |
+|                                                                      | 
+|                                       Integrity protected Portion----+
++----Encrypted Portion     
+                
 ]]></artwork>
           </figure>
 
@@ -650,8 +801,8 @@ Classifier---SFF1----SFF2---SFF3
               target="RFC7518"></xref>.</t>
 
               <t>The Additional Authenticated Data (defined in <xref
-              target="RFC7518"></xref>) MUST be the Base Header, Service Path
-              and unencrypted Context headers.</t>
+              target="RFC7518"></xref>) MUST be the entire NSH data (i.e.,
+              including the Base Header).</t>
 
               <t>Message Authentication Code covering the entire NSH data and
               optional encrypted Context Headers.</t>
@@ -666,42 +817,40 @@ Classifier---SFF1----SFF2---SFF3
 
       <section title="Generic Behavior">
         <t>This document adheres to the recommendations in <xref
-        target="RFC8300"></xref> for handling the context headers at both
+        target="RFC8300"></xref> for handling the Context Headers at both
         ingress and egress SFC boundary nodes. That is, to strip such context
         headers.</t>
 
         <t>Failures to inject or validate the Context Headers defined in this
         document SHOULD be logged locally while a notification alarm MAY be
         sent to an SFC Control Element. Similarly, failure to validate the
-        integrity of NSH data MUST cause that packet to be discarded while a
-        notification alarm MAY be sent to an SFC Control Element. The details
-        of sending notification alarms (i.e., the parameters affecting the
-        transmission of the notification alarms depend on the information in
-        the context header such as frequency, thresholds, and content in the
-        alarm) SHOULD be configurable by the control plane.</t>
+        integrity of the NSH data MUST cause that packet to be discarded while
+        a notification alarm MAY be sent to an SFC Control Element. The
+        details of sending notification alarms (i.e., the parameters affecting
+        the transmission of the notification alarms depend on the information
+        in the context header such as frequency, thresholds, and content in
+        the alarm) SHOULD be configurable by the SFC control plane.</t>
 
         <t>SFC-aware SFs and SFC proxies MAY be instructed to strip some
         encrypted Context Headers from the packet or to pass the data to the
         next SF in the service function chain after processing the content of
         the Context Headers. If no instruction is provided, the default
         behavior for intermediary SFC-aware nodes is to maintain such Context
-        Headers so that the information can be passed to next SFC-aware
-        hops.<!--SFC-aware SFs and SFC proxies MAY be instructed to strip some
-   encrypted context headers from the packet or to pass the data to the
-   next SF in the service function chain after processing the content of
-   the context headers. 
+        Headers so that the information can be passed to next SFC-aware hops.
+        SFC-aware SFs and SFC proxies must re-apply the integrity protection
+        if any modification is made to the Context Headers (strip a Context
+        Header, update the content of an existing Context Header, insert a new
+        Context Header). <!----></t>
 
-Strip sounds like the fields can be simply removed.  They can't, can they?
-[Med] Context headers can be injected, updated, or removed by an SF.
+        <t>An SFC-aware SF or SFC proxy that is not allowed to decrypt any
+        Context Headers MUST NOT be given access to the ENC_KEY.</t>
 
-  I mean, they can be stripped and then integrity protection re-applied, right?  Text should clarify.
-[Med] Point take. 
---></t>
+        <t>Otherwise, an SFC-aware SF or SFC proxy that receives encrypted
+        Context Headers, for which it is not allowed to consume a specific
+        Context Header it decrypts (but consumes others), MUST keep that
+        Context Header unaltered when forwarding the packet upstream.</t>
 
-        <t>An SFC-aware SF or SFC proxy that receives an encrypted Context
-        Header, for which it is not allowed to decrypt the Context Headers,
-        MUST not be given access to the ENC_KEY. <!--Dan: 
-I remain uncomfortable with text in an RFC shaking its finger at implementors.  Should be enforced by denying the necessary key to that element.
+        <t><!--
 --><list style="empty">
             <t>Notes: (1) add more text to handle multiple instances of the
             TLVs, (2) check which actual SFC element is doing what, ...</t>
@@ -723,7 +872,7 @@ I remain uncomfortable with text in an RFC shaking its finger at implementors.  
         key identifier.</t>
 
         <t>The Message Authentication Code T computation process can be
-        illustrated as follows.</t>
+        illustrated as follows:</t>
 
         <figure>
           <artwork><![CDATA[      T = HMAC-SHA-256-128(MAC_KEY, A)
@@ -732,9 +881,9 @@ I remain uncomfortable with text in an RFC shaking its finger at implementors.  
 
         <t></t>
 
-        <t>An entity in the service function path that intends to update NSH
-        MUST follow the above behavior to maintain message integrity of the
-        NSH for subsequent validations.</t>
+        <t>An entity in the SFP that intends to update NSH MUST follow the
+        above behavior to maintain message integrity of the NSH for subsequent
+        validations.</t>
       </section>
 
       <section title="Encrypted NSH Metadata Generation">
@@ -797,21 +946,23 @@ I remain uncomfortable with text in an RFC shaking its finger at implementors.  
         <t></t>
 
         <t>As specified in <xref target="RFC7518"></xref>, the octet string AL
-        is equal to the number of bits in the Additional Authenticated Data A
-        expressed as a 64-bit unsigned big-endian integer.</t>
+        is equal to the number of bits in the Additional Authenticated Data
+        (A) expressed as a 64-bit unsigned big-endian integer.</t>
 
-        <t>An authorized entity in the SFP that intends to update encrypted
-        metadata MUST also follow the aforementioned behavior.</t>
+        <t>An authorized entity in the SFP that intends to update the content
+        of an encrypted Context Header or needs to add encrypted Context
+        Header MUST also follow the aforementioned behavior.</t>
 
         <t>An SFF or SFC-aware SF or SFC proxy that only has access to the
-        MAC_KEY but not the ENC_KEY computes the message Authentication Tag T
-        after decrementing the TTL or SI and replaces the authentication tag
-        in NSH with the computed authentication tag. Similarly, an SFC-aware
-        SF or SFC proxy that does not modify the encrypted Context headers
-        also follows the aforementioned behavior.</t>
+        MAC_KEY but not the ENC_KEY computes the message Authentication Tag
+        (T) after decrementing the TTL (by the SFF) or SI (SF or SFC proxy)
+        and replaces the authentication tag in the NSH with the computed
+        authentication tag. Similarly, an SFC-aware SF or SFC proxy that does
+        not modify the encrypted Context headers also follows the
+        aforementioned behavior.</t>
 
-        <t>The message Authentication Tag T computation process can be
-        illustrated as follows.</t>
+        <t>The message Authentication Tag (T) computation process can be
+        illustrated as follows:</t>
 
         <t><figure>
             <artwork><![CDATA[      M = MAC(MAC_KEY, A || IV || E || AL), 
@@ -825,11 +976,10 @@ I remain uncomfortable with text in an RFC shaking its finger at implementors.  
 are supposed to be re-ordered (or not supposed to be re-ordered).  We know how that should work, but I would add a
  'todo' so that text gets thrown in.  Some implementers will get excited about sequence number, --><!--thinking it could fix problems for them, when the mis-ordering actually occurs before the packet arrives at the NSH Imposer!--><!--
 -->A Timestamp is an unsigned 64-bit integer value and is expressed in seconds
-        relative to 1970-01-01T00:00Z in UTC time <xref
-        target="RFC7049"></xref>. The information is mandatory and MUST always
+        relative to 1970-01-01T00:00Z in UTC time. The information MUST always
         be present. The received NSH is accepted if the Timestamp (TS) in the
         NSH is recent enough to the reception time of the NSH (TSrt). The
-        following formula is used:</t>
+        following formula is used for this check:</t>
 
         <t><figure>
             <artwork><![CDATA[          -Delta < (TSrt ? TS) < +Delta
@@ -837,35 +987,40 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
           </figure></t>
 
         <t>The RECOMMENDED value for the allowed Delta is 2 seconds. If the
-        timestamp is NOT within the boundaries, then the receiver discards the
-        NSH message. In order to synchronize the time, all SFC data plane
-        elements need to be configured to point to a NTP server that will
-        provide clocking to all the devices.</t>
+        timestamp is not within the boundaries, then the SFC data plane
+        element receiving such packet MUST discard the NSH message. </t>
+
+        <t>In order to synchronize the time, all SFC data plane elements need
+        to be configured to point to a NTP server that will provide clocking
+        to all the devices.</t>
       </section>
 
       <section title="NSH Data Validation">
         <t>When an SFC data plane element receives an NSH, it MUST first
-        ensure that all mandatory TLVs required for NSH data integrity are
-        included. It MUST discard the message, if mandatory TLVs are absent or
-        if the timestamp is invalid (described in <xref
-        target="time"></xref>). Otherwise, the SFC data plane element should
-        then proceed with NSH data integrity validation. The SFC data plane
-        element computes the message integrity for the target NSH data
-        (depending on the integrity protection scope discussed in <xref
-        target="enc"></xref>) using the MAC_KEY and HMAC algorithm for the key
-        identifier. If the value of the newly generated digest is identical to
-        the one enclosed in NSH, the SFC data plane element is certain that
-        the NSH data has not been tampered and validation is therefore
-        successful. Otherwise, the NSH message MUST be discarded.</t>
+        ensure that all mandatory Context Headers required for NSH data
+        integrity are included. It MUST discard the message, if one of these
+        mandatory Context Headers is absent or if the timestamp is invalid
+        (described in <xref target="time"></xref>). Otherwise, the SFC data
+        plane element should then proceed with NSH data integrity validation.
+        The SFC data plane element computes the message integrity for the
+        target NSH data (depending on the integrity protection scope discussed
+        in <xref target="enc"></xref>) using the MAC_KEY and HMAC algorithm
+        for the key identifier. If the value of the newly generated digest is
+        identical to the one enclosed in NSH, the SFC data plane element is
+        certain that the NSH data has not been tampered and validation is
+        therefore successful. Otherwise, the NSH message MUST be
+        discarded.</t>
       </section>
 
       <section title="Decryption of NSH Metadata">
         <t>If entitled to consume a supplied encrypted Context Header, an
         SFC-aware SF or SFC proxy decrypts metadata using K and decryption
-        algorithm for the key identifier in NSH. Authenticated encryption
-        algorithm has only a single output, either a plaintext or a special
-        symbol FAIL that indicates that the inputs are not authentic (Section
-        5.2.2.2 of <xref target="RFC7518"></xref>).</t>
+        algorithm for the key identifier in NSH. </t>
+
+        <t>Authenticated encryption algorithm has only a single output, either
+        a plaintext or a special symbol FAIL that indicates that the inputs
+        are not authentic (Section 5.2.2.2 of <xref
+        target="RFC7518"></xref>).</t>
       </section>
     </section>
 
@@ -915,7 +1070,7 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
       Considerations specific to each flavor are discussed in the following
       sub-sections.</t>
 
-      <section title="MAC#1">
+      <section anchor="mac1" title="MAC#1">
         <t>An active attacker can potentially modify the Base header (e.g.,
         decrement the TTL so the next SFF in the SFP discards the NSH packet).
         In the meantime, an active attacker can also drop NSH packets. As
@@ -933,7 +1088,7 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
         integrity protect NSH data and encrypt Context Headers.</t>
       </section>
 
-      <section title="MAC#2">
+      <section anchor="mac2" title="MAC#2">
         <t>SFFs can detect whether an illegitimate node has altered the
         content of the Base header. Such messages MUST be discarded with
         appropriate logs and alarms generated.</t>
@@ -985,15 +1140,11 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
 
       <?rfc include='reference.RFC.7518'?>
 
-      <?rfc include='reference.RFC.8439'?>
-
       <?rfc include='reference.RFC.4107'?>
     </references>
 
     <references title="Informative References">
       <?rfc include="reference.RFC.8459"?>
-
-      <?rfc include='reference.RFC.8446'?>
 
       <?rfc include='reference.RFC.7498'?>
 
@@ -1002,6 +1153,8 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
       <?rfc include="reference.RFC.6973"?>
 
       <?rfc include="reference.RFC.7049"?>
+
+      <?rfc include='reference.I-D.arkko-arch-internet-threat-model'?>
 
       <!---->
     </references>

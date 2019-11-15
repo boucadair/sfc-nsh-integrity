@@ -590,13 +590,17 @@ Classifier---SFF1----SFF2---SFF3
         <t><figure anchor="nest" title="Encapsulation of NSH within NSH">
             <artwork><![CDATA[                    +---------------------------------+
                     |  Outer-Transport Encapsulation  |
-                    +---------------------------------+
-                    |        Lower-NSH Header         |
-                    +---------------------------------+
-                    |        Upper-NSH Header         |
-                    +---------------------------------+
-                    |          Original Packet        |
-                    +---------------------------------+
+                 +->+---------------------------------+
+                 |  |        Lower-NSH Header         |
+                 |  +---------------------------------+
+                 |  |        Upper-NSH Header         |
+                 |  +---------------------------------+
+                 |  |          Original Packet        |
+                 +->+---------------------------------+
+                 |
+                 |                                          
+                 +----Scope of NSH security protection 
+                      provided by a lower-level domain                                           
 ]]></artwork>
           </figure></t>
 

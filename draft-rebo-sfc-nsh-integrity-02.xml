@@ -90,7 +90,7 @@
       </address>
     </author>
 
-    <date day="18" month="November" year="2019" />
+    <date />
 
     <workgroup>SFC</workgroup>
 
@@ -134,14 +134,15 @@
       the development of <xref target="RFC8300"></xref> and <xref
       target="RFC8459"></xref>. The reader may refer to Section 4.2.1 of <xref
       target="I-D.arkko-arch-internet-threat-model"></xref> for a discussion
-      on the need for more awareness about attacks from within closed domains.
-      </t>
+      on the need for more awareness about attacks from within closed
+      domains.</t>
 
-      <t>This specification fills that gap. Concretely, this document adds
+      <t> This specification fills that gap. Concretely, this document adds
       integrity protection and optional encryption of sensitive metadata
-      directly to NSH (<xref target="overview"></xref>). Thus, the NSH do not
+      directly to NSH (<xref target="overview"></xref>); integrity protects
+      the packet payload, and provides relay protection. Thus, the NSH do not
       have to rely upon an underlying transport encapsulation for security and
-      confidentiality.</t>
+      confidentiality. </t>
 
       <t>This specification introduces new Variable-Length Context Headers to
       carry fields necessary for integrity protected NSH headers and encrypted
@@ -241,8 +242,8 @@
           MAY provide integrity protection for the base header. The
           implications of disabling such checks are discussed in <xref
           target="mac1"></xref>.<list style="empty">
-              <t>Discussion Note: Check the level of this requirement with the
-              WG.</t>
+              <t>Discussion Note: This design decision should be discussed
+              with the working group.</t>
             </list></t>
         </list></t>
 
@@ -277,17 +278,23 @@
       reference to <xref target="ex"></xref>, the solution accommodates
       deployment schemes such as: <list style="symbols">
           <t>No Context Header is inserted by the Classifier: it only proceeds
-          with the NSH integrity protection. The NSH encpasulated packet is
-          then forwarded to to the next hop following <xref
-          target="RFC7665"></xref>. </t>
+          with the NSH integrity protection. The NSH encapsulated packet is
+          then forwarded to the next hop following <xref
+          target="RFC7665"></xref>.</t>
 
-          <t>SF1 inserts two Context Headers M1 and M2 that it encrypts.</t>
+          <t>Once the packet is received by SF1, and assuming integrity checks
+          succeed, SF1 inserts two Context Headers M1 and M2 that it encrypts
+          and recomputes the message integrity for the NSH data. </t>
 
-          <t>SF2 decrypts M1 and M2, strips M2 (because its instructed to do
-          so via the SFC control plane), and then encrypts M1.</t>
+          <t>Once the packet is received by SF2, and assuming integrity checks
+          succeed, SF2 decrypts M1 and M2, strips M2 (because its instructed
+          to do so via the SFC control plane), and then encrypts M1 and
+          recomputes the message integrity for the NSH data.</t>
 
-          <t>SF3 decrypts M1 and then strips it. The packet is then forwarded
-          back to SFF3.</t>
+          <t>Once the packet is received by SF3, and assuming integrity checks
+          succeed, SF3 decrypts M1, consumes the decrypted M1 data, and then
+          strips it from the NSH. The packet is then forwarded back to SFF3 by
+          SF3 after recomputing the message integrity for the NSH data.</t>
         </list></t>
 
       <t><figure anchor="ex" title="SFC-enabled Domain Example">
@@ -305,13 +312,16 @@ Classifier---SFF1----SFF2---SFF3
 
       <section title="Supported Security Services">
         <t>This specification provides the functions described in the
-        following sub-sections: </t>
+        following sub-sections:</t>
 
         <section title="Encrypt All or a Subset of Metadata">
           <t>The solution allows to encrypt all or a subset of metadata (that
           is carried in NSH Context Headers) by Classifiers, SFC-aware SFs,
           and SFC proxies. As depicted in <xref target="eroles"></xref>, SFFs
-          are not involved in data encryption. </t>
+          are not involved in data encryption. This memo enforces this design
+          approach by encrypting the Context Header which is not supplied to
+          SFFs, thus enforcing this limitation by protocol (rather than
+          requirements language). </t>
 
           <texttable align="center" anchor="eroles"
                      title="Encryption Function Supported by SFC Data Plane Elements">
@@ -345,7 +355,7 @@ Classifier---SFF1----SFF2---SFF3
           (privacy-sensitive metadata, typically) that must be encrypted.
           Encryption keying material is only provided to these SFC data
           elements. In particular, SFFs are not provisioned with the
-          encryption keying material. </t>
+          encryption keying material.</t>
 
           <t>The control plane may also indicate the set of SFC data plane
           elements that are entitled to supply a given context header (e.g.,
@@ -414,7 +424,7 @@ Classifier---SFF1----SFF2---SFF3
 
           <t>The integrity protection scope is explicitly signaled to
           SFC-aware SFs and SFC proxies in the NSH by means of a dedicated MD
-          Type (<xref target="enc"></xref>). </t>
+          Type (<xref target="enc"></xref>).</t>
 
           <t>In both flavors, the unencrypted metadata and the packet on which
           NSH is imposed are subject to integrity protection.</t>
@@ -492,12 +502,26 @@ Classifier---SFF1----SFF2---SFF3
         target="RFC7518"></xref>.</t>
       </section>
 
+      <section anchor="mti"
+               title="Mandatory-to-Implement Authenticated Encryption and HMAC Algorithms">
+        <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
+        AES_128_CBC_HMAC_SHA_256 algorithm and SHOULD implement the
+        AES_192_CBC_HMAC_SHA_384 and AES_256_CBC_HMAC_SHA_512 algorithms.</t>
+
+        <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
+        HMAC-SHA-256-128 algorithm and SHOULD implement the HMAC-SHA-384-192
+        and HMAC-SHA-512-256 algorithms.</t>
+
+        <t>SFFs MAY implement the aforementioned cipher suites and HMAC
+        algorithms.</t>
+      </section>
+
       <section title="Key Management">
         <t>The procedure for the allocation/provisioning of secret keys (K)
         and authenticated encryption algorithm or MAC_KEY and HMAC algorithm
         is outside the scope of this specification. As such, this
-        specification does not mandate the support of any specific mechanism.
-        </t>
+        specification does not mandate the support of any specific
+        mechanism.</t>
 
         <t>The documents does not assume nor preclude the following:<list
             style="symbols">
@@ -513,8 +537,8 @@ Classifier---SFF1----SFF2---SFF3
         per SFC/SFP and also the need to update keys after encrypting NSH data
         for certain amount of time, this document uses key identifier (kid) to
         unambiguously identify the appropriate keying material. Doing so
-        allows to address the problem of synchronization of keying material.
-        </t>
+        allows to address the problem of synchronization of keying
+        material.</t>
 
         <t>A (non-normative) sample deployment case to illustrate how kids are
         assigned is provided in <xref target="example"></xref>. Additional
@@ -548,20 +572,6 @@ Classifier---SFF1----SFF2---SFF3
         <t><xref target="prorules"></xref> specifies the detailed
         procedure.</t>
       </section>
-    </section>
-
-    <section anchor="mti"
-             title="Mandatory-to-Implement Authenticated Encryption and HMAC Algorithms">
-      <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
-      AES_128_CBC_HMAC_SHA_256 algorithm and SHOULD implement the
-      AES_192_CBC_HMAC_SHA_384 and AES_256_CBC_HMAC_SHA_512 algorithms. </t>
-
-      <t>Classifiers, SFC-aware SFs, and SFC proxies MUST implement the
-      HMAC-SHA-256-128 algorithm and SHOULD implement the HMAC-SHA-384-192 and
-      HMAC-SHA-512-256 algorithms.</t>
-
-      <t>SFFs MAY implement the aforementioned cipher suites and HMAC
-      algorithms.</t>
     </section>
 
     <section anchor="new" title="New NSH Variable-Length Context Headers">
@@ -632,8 +642,8 @@ Classifier---SFF1----SFF2---SFF3
             <t>Length: 8 bytes</t>
 
             <t>Timestamp: Carries an unsigned 64-bit integer value that is
-            expressed in seconds relative to 1970-01-01T00:00Z in UTC time
-            <xref target="RFC7049"></xref>. </t>
+            expressed in seconds relative to 1970-01-01T00:00Z in UTC
+            time.</t>
           </list></t>
       </section>
 
@@ -668,10 +678,11 @@ Classifier---SFF1----SFF2---SFF3
 
         <section anchor="enc1" title="MAC#1 Context Header">
           <t>MAC#1 Context Header is a variable-length TLV that carries the
-          Message Authentication Code (MAC) for the Service Path, Context
-          headers calculated, and the inner NSH packet using MAC_KEY and
-          optionally Context Headers encrypted using ENC_KEY. The scope of
-          this TLV is depicted in <xref target="scope1"></xref>. </t>
+          Message Authentication Code (MAC) for the Service Path Header,
+          Context Headers, and the inner packet on which NSH is imposed,
+          calculated using MAC_KEY and optionally Context Headers encrypted
+          using ENC_KEY. The scope of this TLV is depicted in <xref
+          target="scope1"></xref>.</t>
 
           <t>This MAC flavor does not require sharing MAC_KEY with SFFs. It
           does not require to re-compute the MAC by each SFF because of TTL
@@ -733,7 +744,8 @@ Classifier---SFF1----SFF2---SFF3
 
               <t>The Additional Authenticated Data (defined in <xref
               target="RFC7518"></xref>) MUST be the Service Path header, the
-              unencrypted Context headers, and the inner NSH packet.</t>
+              unencrypted Context headers, and the inner packet on which NSH
+              is imposed .</t>
 
               <t>Message Authentication Code covering the entire NSH data
               excluding the Base header.</t>
@@ -802,7 +814,8 @@ Classifier---SFF1----SFF2---SFF3
 
               <t>The Additional Authenticated Data (defined in <xref
               target="RFC7518"></xref>) MUST be the entire NSH data (i.e.,
-              including the Base Header).</t>
+              including the Base Header) excluding the Context Headers to be
+              encrypted.</t>
 
               <t>Message Authentication Code covering the entire NSH data and
               optional encrypted Context Headers.</t>
@@ -988,7 +1001,7 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
 
         <t>The RECOMMENDED value for the allowed Delta is 2 seconds. If the
         timestamp is not within the boundaries, then the SFC data plane
-        element receiving such packet MUST discard the NSH message. </t>
+        element receiving such packet MUST discard the NSH message.</t>
 
         <t>In order to synchronize the time, all SFC data plane elements need
         to be configured to point to a NTP server that will provide clocking
@@ -1015,7 +1028,7 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
       <section title="Decryption of NSH Metadata">
         <t>If entitled to consume a supplied encrypted Context Header, an
         SFC-aware SF or SFC proxy decrypts metadata using K and decryption
-        algorithm for the key identifier in NSH. </t>
+        algorithm for the key identifier in NSH.</t>
 
         <t>Authenticated encryption algorithm has only a single output, either
         a plaintext or a special symbol FAIL that indicates that the inputs
@@ -1151,8 +1164,6 @@ are supposed to be re-ordered (or not supposed to be re-ordered).  We know how t
       <?rfc include="reference.RFC.7258"?>
 
       <?rfc include="reference.RFC.6973"?>
-
-      <?rfc include="reference.RFC.7049"?>
 
       <?rfc include='reference.I-D.arkko-arch-internet-threat-model'?>
 

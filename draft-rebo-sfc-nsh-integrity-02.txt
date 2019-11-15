@@ -418,7 +418,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  H
    |  |                Context Header(s)                      |  |
    |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
-   |  |                Original Packet / Frame                |
+   |  |                Original Packet                        |
    +->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |
    +------Scope of integrity protected data
@@ -459,7 +459,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  H
    |  |                Context Header(s)                      |  |
    |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
-   |  |                Original Packet / Frame                |
+   |  |                Original Packet                        |
    +->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
    |
    +----Scope of integrity protected data
@@ -635,7 +635,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    forwarded according to the Lower-NSH in a lower-level SFC domain.
 
                        +---------------------------------+
-                       |  Outer-Transport Encapsulation  |
+                       |     Transport Encapsulation     |
                     +->+---------------------------------+
                     |  |        Lower-NSH Header         |
                     |  +---------------------------------+

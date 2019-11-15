@@ -389,7 +389,7 @@ Classifier---SFF1----SFF2---SFF3
 |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  H
 |  |                Context Header(s)                      |  |
 |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
-|  |                Original Packet / Frame                |
+|  |                Original Packet                        |
 +->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                          
 +------Scope of integrity protected data                                                
@@ -414,7 +414,7 @@ Classifier---SFF1----SFF2---SFF3
 |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+  H
 |  |                Context Header(s)                      |  |
 |  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+...
-|  |                Original Packet / Frame                |
+|  |                Original Packet                        |
 +->+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 |                                           
 +----Scope of integrity protected data 
@@ -589,7 +589,7 @@ Classifier---SFF1----SFF2---SFF3
 
         <t><figure anchor="nest" title="Encapsulation of NSH within NSH">
             <artwork><![CDATA[                    +---------------------------------+
-                    |  Outer-Transport Encapsulation  |
+                    |     Transport Encapsulation     |
                  +->+---------------------------------+
                  |  |        Lower-NSH Header         |
                  |  +---------------------------------+

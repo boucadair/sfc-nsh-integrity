@@ -75,12 +75,13 @@ Table of Contents
            Algorithms  . . . . . . . . . . . . . . . . . . . . . . .  10
      4.4.  Key Management  . . . . . . . . . . . . . . . . . . . . .  11
      4.5.  New NSH Variable-Length Context Headers . . . . . . . . .  11
+     4.6.  Encapsulation of NSH within NSH . . . . . . . . . . . . .  12
    5.  New NSH Variable-Length Context Headers . . . . . . . . . . .  12
      5.1.  Key Identifier Context Header . . . . . . . . . . . . . .  12
-     5.2.  Timestamp Context Header  . . . . . . . . . . . . . . . .  12
-     5.3.  MAC and Encrypted Metadata Context Header . . . . . . . .  13
+     5.2.  Timestamp Context Header  . . . . . . . . . . . . . . . .  13
+     5.3.  MAC and Encrypted Metadata Context Header . . . . . . . .  14
        5.3.1.  MAC#1 Context Header  . . . . . . . . . . . . . . . .  14
-       5.3.2.  MAC#2 Context Header  . . . . . . . . . . . . . . . .  15
+       5.3.2.  MAC#2 Context Header  . . . . . . . . . . . . . . . .  16
    6.  Processing Rules  . . . . . . . . . . . . . . . . . . . . . .  17
      6.1.  Generic Behavior  . . . . . . . . . . . . . . . . . . . .  17
      6.2.  MAC NSH Data Generation . . . . . . . . . . . . . . . . .  18
@@ -105,7 +106,6 @@ Table of Contents
    Proxies, NATs, firewalls, etc.) are invoked for the delivery of
    value-added services, particularly to meet various service objectives
    such as IP address sharing, avoiding covert channels, detecting
-   Denial-of-Service (DoS) attacks and protecting network
 
 
 
@@ -114,6 +114,7 @@ Boucadair, et al.         Expires May 17, 2020                  [Page 2]
 Internet-Draft        Integrity Protection for NSH         November 2019
 
 
+   Denial-of-Service (DoS) attacks and protecting network
    infrastructures against them, network slicing, etc.  Because of the
    proliferation of such advanced SFs together with complex service
    deployment constraints that demand more agile service delivery
@@ -160,8 +161,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    14 [RFC2119][RFC8174] when, and only when, they appear in all
    capitals, as shown here.
 
-   This document makes use of the terms defined in [RFC7665] and
-   [RFC8300].
+
 
 
 
@@ -169,6 +169,9 @@ Boucadair, et al.         Expires May 17, 2020                  [Page 3]
 
 Internet-Draft        Integrity Protection for NSH         November 2019
 
+
+   This document makes use of the terms defined in [RFC7665] and
+   [RFC8300].
 
    The document defines the following terms:
 
@@ -215,9 +218,6 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 
    o  The control plane is also used to instruct an SFC-aware SF about
       any metadata it needs to attach to packets for a given SFC.  This
-      instruction may occur any time during the validity lifetime of an
-      SFC/SFP.  The control plane may indicate, for a given service
-
 
 
 
@@ -226,6 +226,8 @@ Boucadair, et al.         Expires May 17, 2020                  [Page 4]
 Internet-Draft        Integrity Protection for NSH         November 2019
 
 
+      instruction may occur any time during the validity lifetime of an
+      SFC/SFP.  The control plane may indicate, for a given service
       function chain, an order for consuming a set of contexts supplied
       in a packet.
 
@@ -261,8 +263,6 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 
          Discussion Note: This design decision should be discussed with
          the working group.
-
-
 
 
 
@@ -620,6 +620,38 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 
    Section 6 specifies the detailed procedure.
 
+4.6.  Encapsulation of NSH within NSH
+
+   As discussed in [RFC8459], an SFC-enabled domain (called, upper-level
+   domain) may be decomposed into many sub-domains (called, lower-level
+   domains).  In order to avoid maintaining state to restore back upper-
+   lower NSH information at the boundaries of lower-level domains, two
+   NSH levels are used: an Upper-NSH which imposed at the boundaries of
+   the upper-level domain, and a Lower-NSH that is pushed by the
+   Classifier of a lower-level domain in front of the original NSH
+   (Figure 5).  As such, the Upper-NSH information is carried along the
+   lower-level chain without modification.  The packet is forwarded in
+   the top-level domain according to the Upper-NSH, while it is
+   forwarded according to the Lower-NSH in a lower-level SFC domain.
+
+                       +---------------------------------+
+                       |  Outer-Transport Encapsulation  |
+                       +---------------------------------+
+                       |        Lower-NSH Header         |
+                       +---------------------------------+
+                       |        Upper-NSH Header         |
+                       +---------------------------------+
+                       |          Original Packet        |
+                       +---------------------------------+
+
+                 Figure 5: Encapsulation of NSH within NSH
+
+   SFC data plane elements of a lower-level domain includes the Upper-
+   NSH when computing the MAC.
+
+   Keying material used at the upper-level domain should not the same as
+   the one used by a lower-level domain.
+
 5.  New NSH Variable-Length Context Headers
 
    This section specifies the format of new Variable-Length Context
@@ -628,10 +660,19 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 
 5.1.  Key Identifier Context Header
 
-   The Key Identifier Context Header (Figure 5) is a variable length Key
+   The Key Identifier Context Header (Figure 6) is a variable length Key
    Identifier object used to identify and deliver keys to SFC data plane
    elements.  Sending this Context Header is REQUIRED for compliance
    with this specification.
+
+
+
+
+
+Boucadair, et al.         Expires May 17, 2020                 [Page 12]
+
+Internet-Draft        Integrity Protection for NSH         November 2019
+
 
    This Context Header is helpful to accommodate deployments relying
    upon keying material per SFC/SFP.  The key identifier helps in
@@ -645,7 +686,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
        |                           Key Identifier                      |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                  Figure 5: Key Identifier Context Header
+                  Figure 6: Key Identifier Context Header
 
    The description of the fields is as follows:
 
@@ -661,18 +702,9 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 
 5.2.  Timestamp Context Header
 
-   The Timestamp Context Header (Figure 6) conveys a 64-bit timestamp
+   The Timestamp Context Header (Figure 7) conveys a 64-bit timestamp
    value.  Sending this Context Header is REQUIRED for compliance with
    this specification.
-
-
-
-
-
-Boucadair, et al.         Expires May 17, 2020                 [Page 12]
-
-Internet-Draft        Integrity Protection for NSH         November 2019
-
 
         0                   1                   2                   3
         0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -682,13 +714,21 @@ Internet-Draft        Integrity Protection for NSH         November 2019
        |                        Timestamp                              |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-                 Figure 6: Sequence Number Context Header
+                 Figure 7: Sequence Number Context Header
 
    The description of the fields is as follows:
 
    o  Metadata Class: MUST be set to 0x0 [RFC8300].
 
    o  Type: TBD2 (See Section 8)
+
+
+
+
+Boucadair, et al.         Expires May 17, 2020                 [Page 13]
+
+Internet-Draft        Integrity Protection for NSH         November 2019
+
 
    o  U: Unassigned bit [RFC8300].
 
@@ -720,15 +760,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
        |                                                               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-            Figure 7: MAC and Encrypted Metadata Context Header
-
-
-
-
-Boucadair, et al.         Expires May 17, 2020                 [Page 13]
-
-Internet-Draft        Integrity Protection for NSH         November 2019
-
+            Figure 8: MAC and Encrypted Metadata Context Header
 
    The description of the fields is provided in the following sub-
    sections.
@@ -739,12 +771,20 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    Message Authentication Code (MAC) for the Service Path Header,
    Context Headers, and the inner packet on which NSH is imposed,
    calculated using MAC_KEY and optionally Context Headers encrypted
-   using ENC_KEY.  The scope of this TLV is depicted in Figure 8.
+   using ENC_KEY.  The scope of this TLV is depicted in Figure 9.
 
    This MAC flavor does not require sharing MAC_KEY with SFFs.  It does
    not require to re-compute the MAC by each SFF because of TTL
    processing.  Section 7.1 discusses the possible threat associated
    with this flavor.
+
+
+
+
+Boucadair, et al.         Expires May 17, 2020                 [Page 14]
+
+Internet-Draft        Integrity Protection for NSH         November 2019
+
 
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -777,16 +817,9 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 |                                       Integrity protected Portion----+
 +----Encrypted Portion
 
-                         Figure 8: Scope of MAC#1
+                         Figure 9: Scope of MAC#1
 
-
-
-Boucadair, et al.         Expires May 17, 2020                 [Page 14]
-
-Internet-Draft        Integrity Protection for NSH         November 2019
-
-
-   In reference to Figure 7, the description of the fields is as
+   In reference to Figure 8, the description of the fields is as
    follows:
 
    o  Metadata Class: MUST be set to 0x0 [RFC8300].
@@ -801,6 +834,14 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    o  Initialization Vector: Carries the IV for authenticated encryption
       algorithm as discussed in Section 5.2 of [RFC7518].
 
+
+
+
+Boucadair, et al.         Expires May 17, 2020                 [Page 15]
+
+Internet-Draft        Integrity Protection for NSH         November 2019
+
+
    o  The Additional Authenticated Data (defined in [RFC7518]) MUST be
       the Service Path header, the unencrypted Context headers, and the
       inner packet on which NSH is imposed .
@@ -813,34 +854,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    MAC#2 Context Header is a variable-length TLV that carries the MAC
    for the entire NSH data calculated using MAC_KEY and optionally
    Context Headers encrypted using ENC_KEY.  The scope of this TLV is
-   depicted in Figure 9.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-Boucadair, et al.         Expires May 17, 2020                 [Page 15]
-
-Internet-Draft        Integrity Protection for NSH         November 2019
-
+   depicted in Figure 10.
 
     0                   1                   2                   3
     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -874,9 +888,17 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 +----Encrypted Portion
 
 
-                         Figure 9: Scope of MAC#2
+                         Figure 10: Scope of MAC#2
 
-   In reference to Figure 7, the description of the fields is as
+
+
+
+Boucadair, et al.         Expires May 17, 2020                 [Page 16]
+
+Internet-Draft        Integrity Protection for NSH         November 2019
+
+
+   In reference to Figure 8, the description of the fields is as
    follows:
 
    o  Metadata Class: MUST be set to 0x0 [RFC8300].
@@ -890,13 +912,6 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 
    o  Initialization Vector: Carries the IV for authenticated encryption
       algorithms as discussed in Section 5.2 of [RFC7518].
-
-
-
-Boucadair, et al.         Expires May 17, 2020                 [Page 16]
-
-Internet-Draft        Integrity Protection for NSH         November 2019
-
 
    o  The Additional Authenticated Data (defined in [RFC7518]) MUST be
       the entire NSH data (i.e., including the Base Header) excluding
@@ -931,6 +946,14 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    encrypted Context Headers from the packet or to pass the data to the
    next SF in the service function chain after processing the content of
    the Context Headers.  If no instruction is provided, the default
+
+
+
+Boucadair, et al.         Expires May 17, 2020                 [Page 17]
+
+Internet-Draft        Integrity Protection for NSH         November 2019
+
+
    behavior for intermediary SFC-aware nodes is to maintain such Context
    Headers so that the information can be passed to next SFC-aware hops.
    SFC-aware SFs and SFC proxies must re-apply the integrity protection
@@ -945,14 +968,6 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    Context Headers, for which it is not allowed to consume a specific
    Context Header it decrypts (but consumes others), MUST keep that
    Context Header unaltered when forwarding the packet upstream.
-
-
-
-
-Boucadair, et al.         Expires May 17, 2020                 [Page 17]
-
-Internet-Draft        Integrity Protection for NSH         November 2019
-
 
       Notes: (1) add more text to handle multiple instances of the TLVs,
       (2) check which actual SFC element is doing what, ...
@@ -984,22 +999,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
 
    An NSH imposer can encrypt Context Headers carrying privacy-sensitive
    metadata, i.e., encrypted and unencrypted metadata may be carried
-   simultaneously (Figure 10).
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+   simultaneously (Figure 11).
 
 
 
@@ -1030,7 +1030,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
        |                                                               |
        +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
-          Figure 10: NSH with Encrypted and Unencrypted Metadata
+          Figure 11: NSH with Encrypted and Unencrypted Metadata
 
    In an SFC-enabled domain where pervasive monitoring [RFC7258] is
    possible, Context Headers carrying privacy-sensitive metadata MUST be
@@ -1381,7 +1381,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
    the NSH data, NSH data will be integrity protected using the new
    MAC_KEY and Context Headers are encrypted using the new ENC_KEY.
 
-   Figure 11 shows an example of an NSH imposer requesting secret key
+   Figure 12 shows an example of an NSH imposer requesting secret key
    and key identifier from the KMS.  The request message includes
    identifiers of SF1 and SF2 Service Functions authorized to receive
    keying material associated with the key identifier.  KMS returns the
@@ -1434,7 +1434,7 @@ Internet-Draft        Integrity Protection for NSH         November 2019
        |                             +---------------------------->|
        |                             |                |            |
 
-                Figure 11: Example of Interactions with KMS
+                Figure 12: Example of Interactions with KMS
 
 Authors' Addresses
 

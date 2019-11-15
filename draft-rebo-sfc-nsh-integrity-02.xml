@@ -572,6 +572,40 @@ Classifier---SFF1----SFF2---SFF3
         <t><xref target="prorules"></xref> specifies the detailed
         procedure.</t>
       </section>
+
+      <section title="Encapsulation of NSH within NSH">
+        <t>As discussed in <xref target="RFC8459"></xref>, an SFC-enabled
+        domain (called, upper-level domain) may be decomposed into many
+        sub-domains (called, lower-level domains). In order to avoid
+        maintaining state to restore back upper-lower NSH information at the
+        boundaries of lower-level domains, two NSH levels are used: an
+        Upper-NSH which imposed at the boundaries of the upper-level domain,
+        and a Lower-NSH that is pushed by the Classifier of a lower-level
+        domain in front of the original NSH (<xref target="nest"></xref>). As
+        such, the Upper-NSH information is carried along the lower-level chain
+        without modification. The packet is forwarded in the top-level domain
+        according to the Upper-NSH, while it is forwarded according to the
+        Lower-NSH in a lower-level SFC domain.</t>
+
+        <t><figure anchor="nest" title="Encapsulation of NSH within NSH">
+            <artwork><![CDATA[                    +---------------------------------+
+                    |  Outer-Transport Encapsulation  |
+                    +---------------------------------+
+                    |        Lower-NSH Header         |
+                    +---------------------------------+
+                    |        Upper-NSH Header         |
+                    +---------------------------------+
+                    |          Original Packet        |
+                    +---------------------------------+
+]]></artwork>
+          </figure></t>
+
+        <t>SFC data plane elements of a lower-level domain includes the
+        Upper-NSH when computing the MAC. </t>
+
+        <t>Keying material used at the upper-level domain should not the same
+        as the one used by a lower-level domain.</t>
+      </section>
     </section>
 
     <section anchor="new" title="New NSH Variable-Length Context Headers">
